@@ -1,4 +1,16 @@
-use actix_web::{web, App, HttpServer, Responder, get};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, get};
+use askama::Template;
+use actix_files::Files;
+
+// Askama template macros
+
+#[derive(Template)]
+#[template(path ="index.html")]
+struct HomeTemplate<'a> {
+    message: &'a str,
+}
+
+
 
 async fn hello() -> impl Responder {
     "Hello world"
@@ -15,7 +27,12 @@ async fn real_home() -> impl Responder {
 
     // create a ternary for a message based on whether fake user is logged in
     let state_string: &str = if user.is_logged_in {"LOGGED IN"} else {"NOT LOGGED IN"};
-    state_string
+
+    let home_template = HomeTemplate { message: state_string };
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(home_template.render().unwrap())
  }
 
 
@@ -29,6 +46,7 @@ async fn home() -> impl Responder {
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
+            .service(Files::new("/static", "./static"))
             .service(
                 web::scope("/auth")
                     .route("/login", web::get().to(hello))
