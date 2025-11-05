@@ -7,9 +7,24 @@ use actix_files::Files;
 #[derive(Template)]
 #[template(path ="index.html")]
 struct HomeTemplate<'a> {
+    title: &'a str,
     message: &'a str,
 }
 
+
+#[derive(Template)]
+#[template(path ="login.html")]
+struct LoginTemplate<'a> {
+    title: &'a str,
+    message: &'a str,
+}
+
+#[derive(Template)]
+#[template(path ="register.html")]
+struct RegisterTemplate<'a> {
+    title: &'a str,
+    message: &'a str,
+}
 
 
 async fn hello() -> impl Responder {
@@ -20,6 +35,8 @@ async fn auth_home() -> impl Responder {
     "Auth Home"
 }
 
+
+/* ROOT DOMAIN */
 #[get("/")]
 async fn real_home() -> impl Responder {
     // For now we create a static fake user who is not logged in
@@ -27,13 +44,49 @@ async fn real_home() -> impl Responder {
 
     // create a ternary for a message based on whether fake user is logged in
     let state_string: &str = if user.is_logged_in {"LOGGED IN"} else {"NOT LOGGED IN"};
+    let title: &str = "Pattmayne Games";
 
-    let home_template = HomeTemplate { message: state_string };
+    let home_template = HomeTemplate { message: state_string, title: title };
 
     HttpResponse::Ok()
         .content_type("text/html")
         .body(home_template.render().unwrap())
  }
+
+
+/* LOGIN ROUTE FUNCTION */
+async fn login_page() -> impl Responder {
+    
+    let user : User = User { username: String::from("Matt"), is_logged_in: false };
+
+    // create a ternary for a message based on whether fake user is logged in
+    let state_string: &str = if user.is_logged_in {"ALREADY LOGGED IN"} else {"PLEASE LOG IN"};
+    let title: &str = "LOGIN";
+
+    let login_template = LoginTemplate { message: state_string, title: title };
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(login_template.render().unwrap())
+}
+
+
+
+/* EGISTER ROUT FUNCTION */
+async fn register_page() -> impl Responder {
+    
+    let user : User = User { username: String::from("Matt"), is_logged_in: false };
+
+    // create a ternary for a message based on whether fake user is logged in
+    let state_string: &str = if user.is_logged_in {"ALREADY LOGGED IN"} else {"PLEASE LOG IN"};
+    let title: &str = "REGISTER";
+
+    let register_template = RegisterTemplate { message: state_string, title: title };
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(register_template.render().unwrap())
+}
 
 
 #[get("/home")]
@@ -49,8 +102,8 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/static", "./static"))
             .service(
                 web::scope("/auth")
-                    .route("/login", web::get().to(hello))
-                    .route("/register", web::get().to(hello))
+                    .route("/login", web::get().to(login_page))
+                    .route("/register", web::get().to(register_page))
                     .route("/", web::get().to(auth_home)))
             .service(home)
             .service(real_home)

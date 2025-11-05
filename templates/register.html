@@ -1,0 +1,72 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title></title>
+        <link rel="stylesheet" href="/static/css/foundation.css?id=7">
+        <link rel="stylesheet" href="/static/css/app.css?id=5">
+    </head>
+
+
+    <body>
+
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 cell">
+                <h1>{{ title }}</h1>
+                <p>
+                    This will be the main page for Pattmayne Games.
+                </p>
+            </div>
+
+            <div class="large-12 cell">
+                <div class="callout">
+                    <p>
+                        Message: {{ message }}
+                    </p>
+                    <form>
+                        <div class="grid-x grid-padding-x">
+                            <div class="large-4 medium-3 cell hide-for-small-only">
+                                &nbsp;
+                            </div>
+                            <div class="large-4 medium-6 small-12 cell">
+                                <h4>{{ title }}</h4>
+                                <label>
+                                    Username:
+                                    <input id="username" name="username" type="text" />
+                                </label>
+
+                                <label>
+                                    Password:
+                                    <input id="password" name="password" type="password" />
+                                </label>
+
+                                <a class="button small" onclick="login">LOGIN</a>
+                            </div>
+                            <div class="large-4 medium-3 cell hide-for-small-only">
+                                &nbsp;
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <div class="callout primary">
+                    <p>This is a second box explaining some things.</p>
+                </div>
+            </div>
+        </div> <!-- end of grid-x -->
+
+    </div><!-- end of grid-container -->
+            
+
+        <script src="/static/js/vendor/jquery.js"></script>
+        <script src="/static/js/vendor/what-input.js"></script>
+        <script src="/static/js/vendor/foundation.js"></script>
+        <script src="/static/js/app.js"></script>
+    </body>
+
+
+</html>

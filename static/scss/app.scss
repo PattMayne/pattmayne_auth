@@ -103,8 +103,16 @@ h1, h2, h3, h4, h5, h6 {
     color: $white;
 }
 
+.callout label {
+    color: $white;
+}
+
 .callout.primary {
     background-color: $timberwolf;
+    color: $black;
+}
+
+.callout.primary label {
     color: $black;
 }
 

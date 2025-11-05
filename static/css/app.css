@@ -41,6 +41,7 @@
   font-weight: bold;
   font-style: italic;
 }
+/* FONT VARIABLES */
 /* HTML ELEMENT OVERRIDES */
 body {
   font-family: droid;
@@ -56,6 +57,10 @@ h1, h2, h3, h4, h5, h6 {
 /* FOUNDATION OVERRIDES */
 .callout {
   background-color: #2e5c8a;
+  color: #f0f0f0;
+}
+
+.callout label {
   color: #f0f0f0;
 }
 
