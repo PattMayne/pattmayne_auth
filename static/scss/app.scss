@@ -5,7 +5,10 @@ $jet: #423841ff;
 $lapis-lazuli: #2e5c8aff;
 $timberwolf: #d6d6d6ff;
 $forest-green: #248232ff;
+$dartmouth-green: #1A6025; /* darker green */
 $bronze: #c97c18ff;
+
+$very-light-gray: #f0f0f0;
 
 
 
@@ -15,16 +18,79 @@ $bronze: #c97c18ff;
         https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
 */
 
-$white: $timberwolf;
+$white: $very-light-gray;
 $black: #111111;
+
+
+/* CUSTOM FONTS */
+
+
+
+@font-face {
+  font-family: nue-gothic-reg;
+  src: url(../fonts/nue-gothic-reg.ttf);
+}
+
+
+@font-face {
+  font-family: nue-gothic-round;
+  src: url(../fonts/nue-gothic-round.ttf);
+}
+
+@font-face {
+  font-family: 'alte';
+  src: url(../fonts/alte-bold.ttf);
+}
+
+
+@font-face {
+  font-family: 'droid';
+  src: url(../fonts/droid-serif-reg.ttf);
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'droid';
+  src: url(../fonts/droid-serif-bold.ttf);
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'droid';
+  src: url(../fonts/droid-serif-italic.ttf);
+  font-weight: normal;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'droid';
+  src: url(../fonts/droid-serif-bold-italic.ttf);
+  font-weight: bold;
+  font-style: italic;
+}
+
+
+/* FONT VARIABLES */
+
+$header-font: nue-gothic-round;
+$text-font: droid;
+$button-font: alte;
 
 
 
 /* HTML ELEMENT OVERRIDES */
 
 body {
+    font-family: $text-font;
     background-color: $jet;
     color: $white;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: $header-font;
+  text-transform: uppercase;
 }
 
 
@@ -47,9 +113,11 @@ body {
     border-radius: 5px;
     background-color: $forest-green;
     color: $white;
+    font-family: $button-font, arial;
+    text-transform: uppercase;
 }
 
 .button:hover, .button:focus {
-    background-color: #14679e;
-    color: #fefefe;
+    background-color: $dartmouth-green;
+    color: $white;
 }

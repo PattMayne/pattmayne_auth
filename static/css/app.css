@@ -1,18 +1,62 @@
 /* RAW COLORS */
+/* darker green */
 /* COLOR SCHEME */
 /*
         https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
 */
+/* CUSTOM FONTS */
+@font-face {
+  font-family: nue-gothic-reg;
+  src: url(../fonts/nue-gothic-reg.ttf);
+}
+@font-face {
+  font-family: nue-gothic-round;
+  src: url(../fonts/nue-gothic-round.ttf);
+}
+@font-face {
+  font-family: "alte";
+  src: url(../fonts/alte-bold.ttf);
+}
+@font-face {
+  font-family: "droid";
+  src: url(../fonts/droid-serif-reg.ttf);
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "droid";
+  src: url(../fonts/droid-serif-bold.ttf);
+  font-weight: bold;
+  font-style: normal;
+}
+@font-face {
+  font-family: "droid";
+  src: url(../fonts/droid-serif-italic.ttf);
+  font-weight: normal;
+  font-style: italic;
+}
+@font-face {
+  font-family: "droid";
+  src: url(../fonts/droid-serif-bold-italic.ttf);
+  font-weight: bold;
+  font-style: italic;
+}
 /* HTML ELEMENT OVERRIDES */
 body {
+  font-family: droid;
   background-color: #423841;
-  color: #d6d6d6;
+  color: #f0f0f0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: nue-gothic-round;
+  text-transform: uppercase;
 }
 
 /* FOUNDATION OVERRIDES */
 .callout {
   background-color: #2e5c8a;
-  color: #d6d6d6;
+  color: #f0f0f0;
 }
 
 .callout.primary {
@@ -24,12 +68,14 @@ body {
   border: 1px solid #111111;
   border-radius: 5px;
   background-color: #248232;
-  color: #faf8f7;
+  color: #f0f0f0;
+  font-family: alte, arial;
+  text-transform: uppercase;
 }
 
 .button:hover, .button:focus {
-  background-color: #14679e;
-  color: #fefefe;
+  background-color: #1A6025;
+  color: #f0f0f0;
 }
 
 /*# sourceMappingURL=app.css.map */
