@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, get};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, web::Redirect};
 use askama::Template;
 use actix_files::Files;
 
@@ -32,7 +32,7 @@ async fn hello() -> impl Responder {
 }
 
 async fn auth_home() -> impl Responder {
-    "Auth Home"
+    Redirect::to("/auth/login")
 }
 
 
@@ -72,7 +72,7 @@ async fn login_page() -> impl Responder {
 
 
 
-/* EGISTER ROUT FUNCTION */
+/* REGISTER ROUTE FUNCTION */
 async fn register_page() -> impl Responder {
     
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
