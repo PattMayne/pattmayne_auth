@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Foundation for Sites</title>
         <link rel="stylesheet" href="static/css/foundation.css">
-        <link rel="stylesheet" href="static/css/app.css">
+        <link rel="stylesheet" href="static/css/app.css?id=2">
     </head>
 
 
@@ -22,9 +22,19 @@
             </div>
 
             <div class="large-12 cell">
-                <p>
-                    Message: {{ message }}
-                </p>
+                <div class="callout">
+                    <p>
+                        Message: {{ message }}
+                    </p>
+                    <span>
+                        <a class="button small">Login</a>
+                        <a class="button small">Register</a>
+                    </span>
+                </div>
+
+                <div class="callout primary">
+                    <p>This is a second box explaining some things.</p>
+                </div>
             </div>
         </div> <!-- end of grid-x -->
 

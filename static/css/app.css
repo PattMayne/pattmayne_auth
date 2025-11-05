@@ -1,0 +1,35 @@
+/* RAW COLORS */
+/* COLOR SCHEME */
+/*
+        https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
+*/
+/* HTML ELEMENT OVERRIDES */
+body {
+  background-color: #423841;
+  color: #d6d6d6;
+}
+
+/* FOUNDATION OVERRIDES */
+.callout {
+  background-color: #2e5c8a;
+  color: #d6d6d6;
+}
+
+.callout.primary {
+  background-color: #d6d6d6;
+  color: #111111;
+}
+
+.button {
+  border: 1px solid #111111;
+  border-radius: 5px;
+  background-color: #248232;
+  color: #faf8f7;
+}
+
+.button:hover, .button:focus {
+  background-color: #14679e;
+  color: #fefefe;
+}
+
+/*# sourceMappingURL=app.css.map */

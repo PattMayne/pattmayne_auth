@@ -1,0 +1,55 @@
+
+
+/* RAW COLORS */
+$jet: #423841ff;
+$lapis-lazuli: #2e5c8aff;
+$timberwolf: #d6d6d6ff;
+$forest-green: #248232ff;
+$bronze: #c97c18ff;
+
+
+
+/* COLOR SCHEME */
+
+/*
+        https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
+*/
+
+$white: $timberwolf;
+$black: #111111;
+
+
+
+/* HTML ELEMENT OVERRIDES */
+
+body {
+    background-color: $jet;
+    color: $white;
+}
+
+
+
+
+/* FOUNDATION OVERRIDES */
+
+.callout {
+    background-color: $lapis-lazuli;
+    color: $white;
+}
+
+.callout.primary {
+    background-color: $timberwolf;
+    color: $black;
+}
+
+.button {
+    border: 1px solid $black;
+    border-radius: 5px;
+    background-color: $forest-green;
+    color: $white;
+}
+
+.button:hover, .button:focus {
+    background-color: #14679e;
+    color: #fefefe;
+}
