@@ -100,6 +100,32 @@ async fn home() -> impl Responder {
 
 /*  POST ROUTES  */
 
+
+/** REGISTER
+ * Get user data, check it against the DB & see if it's right.
+*/
+#[post("/register")]
+async fn register_post(info: web::Json<UserCredentials>) -> HttpResponse {
+    println!("Loggin in");
+    println!("Username: {}", info.username);
+    println!("Password: {}", info.password);
+    
+    let credentials_are_ok: bool = true;
+
+    if info.username.trim().is_empty() || info.password.trim().is_empty() {
+        println!("empty something");
+        return HttpResponse::BadRequest().body("Username or password is empty");
+    }
+
+    if !credentials_are_ok {
+        return HttpResponse::Unauthorized().body("Invalid username or password");
+    }
+
+    HttpResponse::Ok().finish()
+}
+
+
+
 /** LOGIN
  * Get user data, check it against the DB & see if it's right.
 */
@@ -134,7 +160,8 @@ async fn main() -> std::io::Result<()> {
                     .route("/login", web::get().to(login_page))
                     .route("/register", web::get().to(register_page))
                     .route("/", web::get().to(auth_home))
-            .service(login_post))
+            .service(login_post)
+            .service(register_post))
             .service(home)
             .service(real_home)
     })

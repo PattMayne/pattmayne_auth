@@ -69,6 +69,10 @@ h1, h2, h3, h4, h5, h6 {
   color: #111111;
 }
 
+.callout.primary label {
+  color: #111111;
+}
+
 .button {
   border: 1px solid #111111;
   border-radius: 5px;
@@ -81,6 +85,24 @@ h1, h2, h3, h4, h5, h6 {
 .button:hover, .button:focus {
   background-color: #1A6025;
   color: #f0f0f0;
+}
+
+.top-bar,
+.top-bar-right,
+.top-bar-left {
+  background-color: transparent;
+}
+
+.menu,
+.menu li {
+  background-color: #2e5c8a;
+}
+
+/* CUSTOM CLASSES */
+.nav-button {
+  background-color: transparent;
+  border: none;
+  border-radius: 0px;
 }
 
 /*# sourceMappingURL=app.css.map */

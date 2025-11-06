@@ -129,3 +129,24 @@ h1, h2, h3, h4, h5, h6 {
     background-color: $dartmouth-green;
     color: $white;
 }
+
+.top-bar,
+.top-bar-right,
+.top-bar-left{
+  background-color: transparent;
+}
+
+.menu,
+.menu li {
+  background-color: $lapis-lazuli;
+}
+
+/* CUSTOM CLASSES */
+
+
+.nav-button {
+  background-color: transparent;
+  border: none;
+  border-radius: 0px;
+}
+
