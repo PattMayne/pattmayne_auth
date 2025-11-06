@@ -1456,6 +1456,8 @@ dependencies = [
  "actix-web-httpauth",
  "askama",
  "jsonwebtoken",
+ "serde",
+ "serde_json",
  "sqlx",
  "tokio",
 ]

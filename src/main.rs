@@ -1,8 +1,16 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, web::Redirect};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, post, web::Redirect};
 use askama::Template;
 use actix_files::Files;
+use serde::Deserialize;
 
-// Askama template macros
+// This is what we use to receive and store creds for authentication & account creation
+#[derive(Deserialize)]
+struct UserCredentials {
+    username: String,
+    password: String
+}
+
+// Askama template macros (to load HTML templates for route functions to use)
 
 #[derive(Template)]
 #[template(path ="index.html")]
@@ -27,10 +35,6 @@ struct RegisterTemplate<'a> {
 }
 
 
-async fn hello() -> impl Responder {
-    "Hello world"
-}
-
 async fn auth_home() -> impl Responder {
     Redirect::to("/auth/login")
 }
@@ -54,7 +58,7 @@ async fn real_home() -> impl Responder {
  }
 
 
-/* LOGIN ROUTE FUNCTION */
+/* LOGIN PAGE ROUTE FUNCTION */
 async fn login_page() -> impl Responder {
     
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
@@ -72,7 +76,7 @@ async fn login_page() -> impl Responder {
 
 
 
-/* REGISTER ROUTE FUNCTION */
+/* REGISTER PAGE ROUTE FUNCTION */
 async fn register_page() -> impl Responder {
     
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
@@ -88,10 +92,35 @@ async fn register_page() -> impl Responder {
         .body(register_template.render().unwrap())
 }
 
-
+/* TEST ROUTE FUNCTION (delete later) */
 #[get("/home")]
 async fn home() -> impl Responder {
     "You are home"
+}
+
+/*  POST ROUTES  */
+
+/** LOGIN
+ * Get user data, check it against the DB & see if it's right.
+*/
+#[post("/login")]
+async fn login_post(info: web::Json<UserCredentials>) -> HttpResponse {
+    println!("Loggin in");
+    println!("Username: {}", info.username);
+    println!("Password: {}", info.password);
+    
+    let credentials_are_ok: bool = true;
+
+    if info.username.trim().is_empty() || info.password.trim().is_empty() {
+        println!("empty something");
+        return HttpResponse::BadRequest().body("Username or password is empty");
+    }
+
+    if !credentials_are_ok {
+        return HttpResponse::Unauthorized().body("Invalid username or password");
+    }
+
+    HttpResponse::Ok().finish()
 }
 
 
@@ -104,7 +133,8 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/auth")
                     .route("/login", web::get().to(login_page))
                     .route("/register", web::get().to(register_page))
-                    .route("/", web::get().to(auth_home)))
+                    .route("/", web::get().to(auth_home))
+            .service(login_post))
             .service(home)
             .service(real_home)
     })
@@ -134,17 +164,5 @@ struct User {
  *  -login (returns JWT (JSON obj with signature))
  *  -register
  *
- *
- *  TO DO:
- * -- incorporate askama templates
- * -- clicking a link to login or register opens a page with a form
- * -- on login or register page, the form sends a post request and creates a logged in user for main / page
- * -- incorporate database and make schema\
- * -- create actual JWT
- * -- remove extra routes
- * -- style nicely (html and css)
- * -- create endpoints for another app to authenticate
- * --------- create an enum of apps that can use this
- * 
  * 
  * */
