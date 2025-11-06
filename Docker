@@ -1,0 +1,8 @@
+FROM rust:1.91.0 as builder
+WORKDIR /app
+COPY . .
+RUN cargo build
+
+FROM debian:trixie-slim
+WORKDIR /app
+

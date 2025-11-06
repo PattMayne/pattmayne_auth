@@ -1,7 +1,10 @@
+#![allow(dead_code)] // dead code come on I'm just not using the fields yet.
+
 use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, post, web::Redirect};
 use askama::Template;
 use actix_files::Files;
 use serde::Deserialize;
+
 
 // This is what we use to receive and store creds for authentication & account creation
 #[derive(Deserialize)]
