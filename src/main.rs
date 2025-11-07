@@ -4,7 +4,8 @@ use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, post, web::R
 use askama::Template;
 use actix_files::Files;
 use serde::Deserialize;
-
+// local modules
+mod db;
 
 // This is what we use to receive and store creds for authentication & account creation
 #[derive(Deserialize)]
@@ -46,6 +47,13 @@ async fn auth_home() -> impl Responder {
 /* ROOT DOMAIN */
 #[get("/")]
 async fn real_home() -> impl Responder {
+    let _ = db::load_db(); // TODO: catch potential errors
+
+
+    let pw_hash = db::hash_password(String::from("mottolax"));
+    println!("{}", pw_hash);
+
+
     // For now we create a static fake user who is not logged in
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
 
@@ -53,7 +61,7 @@ async fn real_home() -> impl Responder {
     let state_string: &str = if user.is_logged_in {"LOGGED IN"} else {"NOT LOGGED IN"};
     let title: &str = "Pattmayne Games";
 
-    let home_template = HomeTemplate { message: state_string, title: title };
+    let home_template: HomeTemplate<'_> = HomeTemplate { message: state_string, title: title };
 
     HttpResponse::Ok()
         .content_type("text/html")

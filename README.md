@@ -13,6 +13,7 @@ I'll use JSON webtokens and a postgresql database.
 * actix-files = "0.6.8"
 * serde = "1.0.228"
 * serde_json = "1.0.145"
+* dotenvy = "0.15.7"dotenvy = "0.15.7"
 
 
 ### TO DO:
@@ -24,5 +25,6 @@ I'll use JSON webtokens and a postgresql database.
  * style nicely (html and css)
  * create endpoints for another app to authenticate
  * * create an enum of apps that can use this
-
+ * * or MAYBE they should be in the DB instead.
+ * Containerize with Docker
  
