@@ -19,7 +19,8 @@ I'll use JSON webtokens and a postgresql database.
 ### TO DO:
  * on login or register page, the form sends a post request and creates a logged in user for main / page
  * nav in header included in template ( HOME | LOGOUT | LOGIN | REGISTER ) (send User obj to header template)
- * incorporate database and make schema\
+ * incorporate database and make schema
+ * suspend IP address if too many failed attempts
  * create actual JWT
  * remove extra routes
  * style nicely (html and css)

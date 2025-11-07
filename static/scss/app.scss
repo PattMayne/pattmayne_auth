@@ -44,38 +44,39 @@ $black: #111111;
 
 
 @font-face {
-  font-family: 'droid';
-  src: url(../fonts/droid-serif-reg.ttf);
+  font-family: 'lato';
+  src: url(../fonts/lato-med.ttf);
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'droid';
-  src: url(../fonts/droid-serif-bold.ttf);
+  font-family: 'lato';
+  src: url(../fonts/lato-bold.ttf);
   font-weight: bold;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'droid';
-  src: url(../fonts/droid-serif-italic.ttf);
+  font-family: 'lato';
+  src: url(../fonts/lato-med-italic.ttf);
   font-weight: normal;
   font-style: italic;
 }
 
 @font-face {
-  font-family: 'droid';
-  src: url(../fonts/droid-serif-bold-italic.ttf);
+  font-family: 'lato';
+  src: url(../fonts/lato-bold-italic.ttf);
   font-weight: bold;
   font-style: italic;
 }
+
 
 
 /* FONT VARIABLES */
 
 $header-font: nue-gothic-round;
-$text-font: droid;
+$text-font: lato;
 $button-font: alte;
 
 

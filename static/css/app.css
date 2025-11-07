@@ -18,33 +18,33 @@
   src: url(../fonts/alte-bold.ttf);
 }
 @font-face {
-  font-family: "droid";
-  src: url(../fonts/droid-serif-reg.ttf);
+  font-family: "lato";
+  src: url(../fonts/lato-med.ttf);
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: "droid";
-  src: url(../fonts/droid-serif-bold.ttf);
+  font-family: "lato";
+  src: url(../fonts/lato-bold.ttf);
   font-weight: bold;
   font-style: normal;
 }
 @font-face {
-  font-family: "droid";
-  src: url(../fonts/droid-serif-italic.ttf);
+  font-family: "lato";
+  src: url(../fonts/lato-med-italic.ttf);
   font-weight: normal;
   font-style: italic;
 }
 @font-face {
-  font-family: "droid";
-  src: url(../fonts/droid-serif-bold-italic.ttf);
+  font-family: "lato";
+  src: url(../fonts/lato-bold-italic.ttf);
   font-weight: bold;
   font-style: italic;
 }
 /* FONT VARIABLES */
 /* HTML ELEMENT OVERRIDES */
 body {
-  font-family: droid;
+  font-family: lato;
   background-color: #423841;
   color: #f0f0f0;
 }
