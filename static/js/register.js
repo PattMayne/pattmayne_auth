@@ -4,11 +4,13 @@ $(document).foundation()
 const submit_register = async () => {
     const pass_element = document.getElementById("password")
     const username_element = document.getElementById("username")
+    const email_element = document.getElementById("email")
 
     // TODO: check data format
 
     const creds = {
         password: pass_element.value.trim(),
+        email: email_element.value.trim(),
         username: username_element.value.trim()
     }
 

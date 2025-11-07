@@ -7,10 +7,19 @@ use serde::Deserialize;
 // local modules
 mod db;
 
-// This is what we use to receive and store creds for authentication & account creation
+// Store credentials when user tries to register
 #[derive(Deserialize)]
-struct UserCredentials {
+struct RegisterCredentials {
     username: String,
+    email: String,
+    password: String
+}
+
+
+// Store credentials when a user tries to login
+#[derive(Deserialize)]
+struct LoginCredentials{
+    username_or_email: String,
     password: String
 }
 
@@ -49,10 +58,9 @@ async fn auth_home() -> impl Responder {
 async fn real_home() -> impl Responder {
     let _ = db::load_db(); // TODO: catch potential errors
 
-
     let pw_hash = db::hash_password(String::from("mottolax"));
     println!("{}", pw_hash);
-
+    
 
     // For now we create a static fake user who is not logged in
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
@@ -116,14 +124,15 @@ async fn home() -> impl Responder {
  * Get user data, check it against the DB & see if it's right.
 */
 #[post("/register")]
-async fn register_post(info: web::Json<UserCredentials>) -> HttpResponse {
+async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
     println!("Loggin in");
     println!("Username: {}", info.username);
+    println!("Email: {}", info.email);
     println!("Password: {}", info.password);
     
     let credentials_are_ok: bool = true;
 
-    if info.username.trim().is_empty() || info.password.trim().is_empty() {
+    if info.username.trim().is_empty() || info.password.trim().is_empty() || info.email.trim().is_empty() {
         println!("empty something");
         return HttpResponse::BadRequest().body("Username or password is empty");
     }
@@ -141,14 +150,14 @@ async fn register_post(info: web::Json<UserCredentials>) -> HttpResponse {
  * Get user data, check it against the DB & see if it's right.
 */
 #[post("/login")]
-async fn login_post(info: web::Json<UserCredentials>) -> HttpResponse {
+async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
     println!("Loggin in");
-    println!("Username: {}", info.username);
+    println!("Username or Password: {}", info.username_or_email);
     println!("Password: {}", info.password);
     
     let credentials_are_ok: bool = true;
 
-    if info.username.trim().is_empty() || info.password.trim().is_empty() {
+    if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         println!("empty something");
         return HttpResponse::BadRequest().body("Username or password is empty");
     }

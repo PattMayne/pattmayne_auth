@@ -37,10 +37,9 @@ pub fn load_db() -> Result<(), Box<dyn Error>> {
  */
 pub fn hash_password(input_password: String) -> String {
     let salt: SaltString = SaltString::generate(&mut OsRng);
-    let argon2: Argon2<'_> = Argon2::default();
 
     // Hash the password and return
-    argon2.hash_password(
+    Argon2::default().hash_password(
         input_password.as_bytes(),
         &salt
     ).unwrap().to_string()
