@@ -3,16 +3,24 @@
 use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, post, web::Redirect};
 use askama::Template;
 use actix_files::Files;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
 // local modules
 mod db;
+mod utils;
+
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+    code: u16,
+}
 
 // Store credentials when user tries to register
 #[derive(Deserialize)]
 struct RegisterCredentials {
     username: String,
     email: String,
-    password: String
+    password: String,
 }
 
 
@@ -121,24 +129,35 @@ async fn home() -> impl Responder {
 
 
 /** REGISTER
- * Get user data, check it against the DB & see if it's right.
+ * The user/client calls this API to register.
+ * We get user data, check it against regex for formatting,
+ * and against the DB & see if it already exists.
 */
 #[post("/register")]
-async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
-    println!("Loggin in");
-    println!("Username: {}", info.username);
-    println!("Email: {}", info.email);
-    println!("Password: {}", info.password);
-    
-    let credentials_are_ok: bool = true;
+async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {    
 
-    if info.username.trim().is_empty() || info.password.trim().is_empty() || info.email.trim().is_empty() {
-        println!("empty something");
-        return HttpResponse::BadRequest().body("Username or password is empty");
-    }
+    // check credentials against regex and size ranges
+    let username_valid: bool = utils::validate_username(&info.username);
+    let email_valid: bool = utils::validate_email(&info.email);
+    let password_valid: bool = utils::validate_password(&info.password);
+
+    let credentials_are_ok: bool = username_valid && email_valid && password_valid;
+
+    // TO DO: check the database for duplicate email or username (code 409 for failure)
 
     if !credentials_are_ok {
-        return HttpResponse::Unauthorized().body("Invalid username or password");
+        // 401 is auth failure (for login failure) 
+        // 422 is for regex failure / validation error
+        // 409 is for conflict: email or username already taken
+
+        // 401 (not valid here for reg)
+        //return HttpResponse::Unauthorized().body("Invalid username or password");
+
+        // 409 Conflict   (specify whether email or password already exists)
+        return HttpResponse::Conflict().body("Email or password already in use");
+
+        // BUT send a JSON instead of a .body("message")
+        // For ALL of them!
     }
 
     HttpResponse::Ok().finish()

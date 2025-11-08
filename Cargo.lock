@@ -1492,6 +1492,7 @@ dependencies = [
  "jsonwebtoken",
  "password-hash",
  "rand_core 0.6.4",
+ "regex",
  "serde",
  "serde_json",
  "sqlx",

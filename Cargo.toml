@@ -15,5 +15,7 @@ serde = "1.0.228"
 serde_json = "1.0.145"
 dotenvy = "0.15.7"
 password-hash = "0.5.0"
+# use this old rand_core version for compatibility with argon2
 rand_core = "0.6"
 argon2 = "0.5.3"
+regex = "1.12.2"

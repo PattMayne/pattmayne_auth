@@ -59,8 +59,10 @@ const submit_register = async () => {
     if (!all_fields_legit) {
         console.log(err_msgs.length);
         show_err_box()
-        return
-    }
+        //return
+    } else {
+        hide_err_box()
+    }    
 
     // now send it to the register route
     const route = "/auth/register"
