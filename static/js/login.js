@@ -24,3 +24,27 @@ const submit_login = async () => {
 
     console.log('status:', response.status)
 }
+
+
+// SHOW/HIDE ERROR BOX
+
+const hide_err_box = () =>
+    document.getElementById("err_msg_box").style.display = "none"
+
+const show_err_box = () => {
+    const err_box = document.getElementById("err_msg_box")
+    err_box.innerHTML = "";
+
+    for (let err_msg of err_msgs) {
+        const msg_p = "<p>" + err_msg + "</p>"
+        err_box.innerHTML += msg_p
+    }
+
+    err_box.style.display = ""
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    hide_err_box();
+});
+
