@@ -31,16 +31,11 @@ const submit_register = async () => {
     all_fields_legit = utils.check_password(creds.password, err_msgs) && all_fields_legit
     all_fields_legit = utils.check_email(creds.email, err_msgs) && all_fields_legit
 
-    // printing to console now.
-    // But we must put this in a div instead
-    for (let err_msg of err_msgs) {
-        console.log(err_msg)
-    }
-
+    // if any checks failed, show the error and return
     if (!all_fields_legit) {
         console.log(err_msgs.length);
         show_err_box()
-        //return
+        return
     } else {
         hide_err_box()
     }    
