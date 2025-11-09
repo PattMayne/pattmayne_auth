@@ -6,6 +6,28 @@ use rand_core::OsRng;
 use password_hash::{SaltString, PasswordHash};
 use dotenvy;
 use std::error::Error;
+use time::OffsetDateTime;
+use anyhow::Result;
+use serde;
+
+// use pattern matching in an impl function to get a String to store to DB
+pub enum UserRole {
+    Admin,
+    Player,
+}
+
+#[derive(serde::Serialize)]
+pub struct User {
+    id: i64,
+    username: String,
+    email: String,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    role: String,
+    password_hash: String,
+    created_timestamp: OffsetDateTime,
+}
+
 
 fn load_db_old() {
     // get the database URL from the .env file
@@ -17,6 +39,7 @@ fn load_db_old() {
 }
 
 
+// I WILL NOT USE THIS. DELETE later
 pub fn load_db() -> Result<(), Box<dyn Error>> {
     // Load environment variables from .env file.
     // CHECK: Fails if .env file not found, not readable or invalid.
@@ -28,6 +51,18 @@ pub fn load_db() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+
+pub async fn create_pool() -> Result<MySqlPool> {
+     // Load environment variables from .env file.
+    // CHECK: Fails if .env file not found, not readable or invalid.
+    dotenvy::dotenv()?;
+    let database_url = dotenvy::var("DATABASE_URL")?;
+    
+    Ok(MySqlPool::connect(database_url.as_str()).await?)
+}
+
+
 
 /**
  * Used when a user registers. We must hash their password so that the raw
@@ -59,4 +94,18 @@ pub fn verify_password(input_password: String, stored_hash: String) -> bool {
         input_password.as_bytes(),
         &parsed_stored_hash
     ).is_ok()
+}
+
+
+// RETRIEVE USER FUNCTIONS
+
+pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
+    let pool: MySqlPool = create_pool().await?;
+    let query: &str = "SELECT * from users WHERE username = ?";
+
+    Ok(sqlx::query_as!(
+            User,
+            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp FROM users WHERE username = ?",
+            username
+        ).fetch_optional(&pool).await?)
 }

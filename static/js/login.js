@@ -25,7 +25,9 @@ const submit_login = async () => {
 
     // Check the inputs (identifier must match email OR username specifications)
     // The backend will figure out which thing we did
-    let all_fields_legit = utils.check_username(creds.username_or_email, err_msgs) || utils.check_email(creds.username_or_email, err_msgs)
+    let all_fields_legit =
+        utils.check_username(creds.username_or_email, err_msgs) ||
+        utils.check_email(creds.username_or_email, err_msgs)
     all_fields_legit = utils.check_password(creds.password, err_msgs) && all_fields_legit
 
     if (!all_fields_legit) {
@@ -40,15 +42,30 @@ const submit_login = async () => {
     // now send it to the login route
     const route = "/auth/login"
 
-    const response = await fetch(route, {
+    await fetch(route, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json; charset=utf-8'
         },
         body: JSON.stringify(creds)
+    }).then(response => {
+        console.log("whole response: ", response)
+        if(!response.ok) {
+            throw new Error("User not found or server error.")
+        }
+        return response.json()
+    }).then(user => {
+        console.log("User data: ", user)
+        // do something with the user
+    }).catch(error => {
+        console.log('Error: ', error)
     })
 
-    console.log('status:', response.status)
+        // THIS WORKS.
+        // I got the data.
+        // Next CHECK PASSWORD
+        // Now I need to make the REGISTER function add users to the DB.
+
 }
 
 

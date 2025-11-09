@@ -185,7 +185,30 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
         return HttpResponse::Unauthorized().body("Invalid username or password");
     }
 
-    HttpResponse::Ok().finish()
+
+    // TRYING TO GET A USER:
+    // for now just assume it's a username
+
+    let user_result = db::get_user_by_username(&info.username_or_email).await;
+
+    // NOW we can do PATTERN MATCHING to return something
+
+    match user_result {
+        Ok(Some(user)) => {
+            println!("found a user");
+            HttpResponse::Ok().json(user)
+        },
+        Ok(None) => {
+            println!("Did NOT find a user");
+            HttpResponse::NotFound().body("User not found")
+        },
+        Err(e) => {
+            eprintln!("DB error: {:?}", e);
+            HttpResponse::InternalServerError().body("Internal error")
+        }
+    }
+
+
 }
 
 

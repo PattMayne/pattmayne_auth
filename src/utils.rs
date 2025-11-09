@@ -4,7 +4,7 @@ use regex::Regex;
 
 struct StringRange {
     min: usize,
-    max: usize
+    max: usize,
 }
 
 fn string_length_valid(range_obj: &StringRange, string: &String) -> bool {
