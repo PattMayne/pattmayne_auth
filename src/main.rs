@@ -5,6 +5,7 @@ use askama::Template;
 use actix_files::Files;
 use serde::{Deserialize, Serialize};
 
+
 // local modules
 mod db;
 mod utils;
@@ -196,15 +197,39 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
     match user_result {
         Ok(Some(user)) => {
             println!("found a user");
-            HttpResponse::Ok().json(user)
+
+            // Now check the password
+            if db::verify_password(&info.password, &user.password_hash) {
+                println!("password match");
+                // Here I should actually generate a login token
+                return HttpResponse::Ok().json(user);
+            }
+
+            // Auth clearly failed
+            println!("password NOT match");
+
+            let auth_failure_data: ErrorResponse = ErrorResponse {
+                error: String::from("Invalid Credentialsss"),
+                code: 401
+            };
+
+            HttpResponse::Unauthorized().json(auth_failure_data)
         },
         Ok(None) => {
-            println!("Did NOT find a user");
-            HttpResponse::NotFound().body("User not found")
+            let lookup_failure_data: ErrorResponse = ErrorResponse {
+                error: String::from("User not found."),
+                code: 404
+            };
+
+            HttpResponse::NotFound().json(lookup_failure_data)
         },
         Err(e) => {
-            eprintln!("DB error: {:?}", e);
-            HttpResponse::InternalServerError().body("Internal error")
+            let err_data: ErrorResponse = ErrorResponse {
+                error: e.to_string(),
+                code: 404
+            };
+
+            HttpResponse::InternalServerError().json(err_data)
         }
     }
 

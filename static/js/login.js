@@ -51,6 +51,16 @@ const submit_login = async () => {
     }).then(response => {
         console.log("whole response: ", response)
         if(!response.ok) {
+
+            response.json().then(data => {
+                let err_str = "Error: " + data.error
+                console.log(err_str)
+                err_msgs.push(data.error)
+                show_err_box()
+            });
+
+//            console.log("whole error response: ", response.json())
+
             throw new Error("User not found or server error.")
         }
         return response.json()

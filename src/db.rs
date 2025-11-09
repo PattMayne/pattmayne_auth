@@ -24,7 +24,7 @@ pub struct User {
     first_name: Option<String>,
     last_name: Option<String>,
     role: String,
-    password_hash: String,
+    pub password_hash: String,
     created_timestamp: OffsetDateTime,
 }
 
@@ -85,7 +85,7 @@ pub fn hash_password(input_password: String) -> String {
  * the stored hashed password.
  * @return bool (matches or does not match)
  */
-pub fn verify_password(input_password: String, stored_hash: String) -> bool {
+pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
     let parsed_stored_hash: PasswordHash<'_> = PasswordHash::new(&stored_hash).unwrap();
     let argon2: Argon2<'_> = Argon2::default();
 
