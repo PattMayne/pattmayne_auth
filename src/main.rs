@@ -188,9 +188,12 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 
 
     // TRYING TO GET A USER:
-    // for now just assume it's a username
 
-    let user_result = db::get_user_by_username(&info.username_or_email).await;
+    let user_result = if utils::validate_email(&info.username_or_email) {
+        db::get_user_by_email(&info.username_or_email).await
+    } else {
+        db::get_user_by_username(&info.username_or_email).await
+    };
 
     // NOW we can do PATTERN MATCHING to return something
 

@@ -28,4 +28,5 @@ I'll use JSON webtokens and a postgresql database.
  * * create an enum of apps that can use this
  * * or MAYBE they should be in the DB instead.
  * Containerize with Docker
+ * Switch to PostgreSQL because bools are bools instead of ints (but maybe that's not important)
  

@@ -26,6 +26,16 @@ pub struct User {
     role: String,
     pub password_hash: String,
     created_timestamp: OffsetDateTime,
+    email_verified: i8 // actually a bool but mysql doesn't do "real" bools
+}
+
+
+impl User {
+
+    pub fn email_verified(&self) -> bool {
+        self.email_verified != 0
+    }
+
 }
 
 
@@ -101,11 +111,22 @@ pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
 
 pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
     let pool: MySqlPool = create_pool().await?;
-    let query: &str = "SELECT * from users WHERE username = ?";
 
     Ok(sqlx::query_as!(
             User,
-            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp FROM users WHERE username = ?",
+            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp, email_verified FROM users WHERE username = ?",
             username
         ).fetch_optional(&pool).await?)
 }
+
+
+pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+            User,
+            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp, email_verified FROM users WHERE email = ?",
+            email
+        ).fetch_optional(&pool).await?)
+}
+
