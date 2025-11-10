@@ -165,17 +165,27 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
         return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY).json(bad_creds_data);
     }
 
-    /* Input credentials are acceptable.
+    /* Input credentials are acceptable format.
      * Try to enter them in the database.
      * if username or email already exists, send a 409
+     * Do a pre-check first.
     */
 
-    let username_or_email_already_exists: bool = true;
+    let username_exists = db::username_taken(&info.username).await;
+    let email_exists = db::email_taken(&info.email).await;
+
+    let username_or_email_already_exists: bool = username_exists || email_exists;
 
     if username_or_email_already_exists {
-        // 409 Conflict   (specify whether email or password already exists)
-        // do it as a regular ErrorResponse JSON
-        return HttpResponse::Conflict().body("Email or password already in use");
+        let bad_creds_data: BadRegistrationInputs = BadRegistrationInputs {
+            email_valid: !email_exists,
+            username_valid: !username_exists,
+            password_valid: password_valid,
+            code: 409,
+        };
+
+        println!("Duplicate data");
+        return HttpResponse::Conflict().json(bad_creds_data);
     }
 
     // WE ARE SUPPOSED TO SEND A JSON... frontend expects a JSON (getting errors now)

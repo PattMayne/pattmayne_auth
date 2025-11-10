@@ -53,10 +53,20 @@ const submit_register = async () => {
         if (!response.ok) {
             response.json().then(data => {
 
-                // If inputs were unacceptable, backend informs us, we show the message.
-                !data.username_valid && err_msgs.push(utils.username_reqs_msg)
-                !data.email_valid && err_msgs.push(utils.email_reqs_msg)
-                !data.password_valid && err_msgs.push(utils.password_reqs_msg)
+                if (!!data.code) {
+                    if (data.code == 422){
+                        // If inputs were unacceptable, backend informs us, we show the message.
+                        !data.username_valid && err_msgs.push(utils.username_reqs_msg)
+                        !data.email_valid && err_msgs.push(utils.email_reqs_msg)
+                        !data.password_valid && err_msgs.push(utils.password_reqs_msg)
+                    } else if (data.code == 409){
+                        // If inputs were unacceptable, backend informs us, we show the message.
+                        !data.username_valid && err_msgs.push("Username already taken.")
+                        !data.email_valid && err_msgs.push("Email already taken.")
+                    }
+                } else {
+                    err_msgs.push("Error.")
+                }
 
                 show_err_box()
             })

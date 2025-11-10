@@ -16,6 +16,11 @@ pub enum UserRole {
     Player,
 }
 
+#[derive(Debug)]
+struct Count {
+    count: i64,
+}
+
 #[derive(serde::Serialize)]
 pub struct User {
     id: i64,
@@ -32,7 +37,7 @@ pub struct User {
 
 impl User {
 
-    pub fn email_verified(&self) -> bool {
+    pub fn get_email_verified(&self) -> bool {
         self.email_verified != 0
     }
 
@@ -107,6 +112,59 @@ pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
 }
 
 
+// Pre-check for duplicates
+pub async fn username_taken(username: &String) -> bool {
+    let pool: MySqlPool = match create_pool().await {
+        Ok(pool) => pool,
+        Err(e) => {
+            eprintln!("Failed to create pool: {:?}", e);
+            return false;
+        }
+    };
+
+    let count_option: Option<Count> = match sqlx::query_as!(
+        Count,
+        "SELECT COUNT(*) as count FROM users WHERE username = ?",
+        username
+    ).fetch_optional(&pool).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Failed to fetch count from DB: {:?}", e);
+            return false;
+        }
+    };
+
+    let count: i64 = count_option.unwrap_or(Count{count: 0}).count;
+    count > 0
+}
+
+pub async fn email_taken(email: &String) -> bool {
+    let pool: MySqlPool = match create_pool().await {
+        Ok(pool) => pool,
+        Err(e) => {
+            eprintln!("Failed to create pool: {:?}", e);
+            return false;
+        }
+    };
+
+    let count_option: Option<Count> = match sqlx::query_as!(
+        Count,
+        "SELECT COUNT(*) as count FROM users WHERE email = ?",
+        email
+    ).fetch_optional(&pool).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Failed to fetch count from DB: {:?}", e);
+            return false;
+        }
+    };
+
+    let count: i64 = count_option.unwrap_or(Count{count: 0}).count;
+    count > 0
+
+}
+
+
 // RETRIEVE USER FUNCTIONS
 
 pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
@@ -124,9 +182,9 @@ pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
     let pool: MySqlPool = create_pool().await?;
 
     Ok(sqlx::query_as!(
-            User,
-            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp, email_verified FROM users WHERE email = ?",
-            email
-        ).fetch_optional(&pool).await?)
+        User,
+        "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp, email_verified FROM users WHERE email = ?",
+        email
+    ).fetch_optional(&pool).await?)
 }
 
