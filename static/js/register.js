@@ -49,9 +49,33 @@ const submit_register = async () => {
             'Content-Type': 'application/json; charset=utf-8'
         },
         body: JSON.stringify(creds)
+    }).then(response => {
+        if (!response.ok) {
+            response.json().then(data => {
+
+                // If inputs were unacceptable, backend informs us, we show the message.
+                !data.username_valid && err_msgs.push(utils.username_reqs_msg)
+                !data.email_valid && err_msgs.push(utils.email_reqs_msg)
+                !data.password_valid && err_msgs.push(utils.password_reqs_msg)
+
+                show_err_box()
+            })
+
+            throw new Error("Inputs invalid or server error.")
+        }
+        return response.json()
+    }).then(user => {
+        // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
+        console.log("User data: ", user)
+        // do something with the user
+    }).catch(error => {
+        console.log('Error: ', error)
     })
 
-    console.log('status:', response.status)
+    // CATCH the errors and display
+    // 
+
+    //console.log('status:', response.status)
 }
 
 // SHOW/HIDE ERROR BOX
@@ -72,8 +96,9 @@ const show_err_box = () => {
 }
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    hide_err_box();
-});
+document.addEventListener('DOMContentLoaded', () => hide_err_box())
+document.getElementById('username').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_register())
+document.getElementById('email').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_register())
+document.getElementById('password').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_register())
 
 window.submit_register = submit_register

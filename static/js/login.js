@@ -31,10 +31,10 @@ const submit_login = async () => {
     all_fields_legit = utils.check_password(creds.password, err_msgs) && all_fields_legit
 
     if (!all_fields_legit) {
-        console.log(err_msgs.length);
         show_err_box()
         return
     } else {
+        err_msgs = []
         hide_err_box()
     }    
 
@@ -49,33 +49,22 @@ const submit_login = async () => {
         },
         body: JSON.stringify(creds)
     }).then(response => {
-        console.log("whole response: ", response)
         if(!response.ok) {
-
             response.json().then(data => {
-                let err_str = "Error: " + data.error
-                console.log(err_str)
-                err_msgs.push(data.error)
+                err_msgs.push(!!data.error ? data.error : "Error")
                 show_err_box()
-            });
-
-//            console.log("whole error response: ", response.json())
+            })
 
             throw new Error("User not found or server error.")
         }
         return response.json()
     }).then(user => {
+        // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
         console.log("User data: ", user)
         // do something with the user
     }).catch(error => {
         console.log('Error: ', error)
     })
-
-        // THIS WORKS.
-        // I got the data.
-        // Next CHECK PASSWORD
-        // Now I need to make the REGISTER function add users to the DB.
-
 }
 
 
@@ -97,8 +86,13 @@ const show_err_box = () => {
 }
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    hide_err_box();
-});
+// Add event listeners
+
+document.addEventListener('DOMContentLoaded', () => hide_err_box())
+document.getElementById('username_or_email').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_login())
+document.getElementById('password').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_login())
+
+
+// Make functions available to the HTML elements (via window)
 
 window.submit_login = submit_login

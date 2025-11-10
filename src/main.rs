@@ -1,6 +1,6 @@
 #![allow(dead_code)] // dead code come on I'm just not using the fields yet.
 
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, get, post, web::Redirect};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, http::StatusCode, get, post, web::Redirect};
 use askama::Template;
 use actix_files::Files;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,14 @@ mod utils;
 #[derive(Serialize)]
 struct ErrorResponse {
     error: String,
+    code: u16,
+}
+
+#[derive(Serialize)]
+struct BadRegistrationInputs {
+    email_valid: bool,
+    username_valid: bool,
+    password_valid: bool,
     code: u16,
 }
 
@@ -122,9 +130,7 @@ async fn register_page() -> impl Responder {
 
 /* TEST ROUTE FUNCTION (delete later) */
 #[get("/home")]
-async fn home() -> impl Responder {
-    "You are home"
-}
+async fn home() -> impl Responder { "You are home" }
 
 /*  POST ROUTES  */
 
@@ -147,20 +153,32 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
     // TO DO: check the database for duplicate email or username (code 409 for failure)
 
     if !credentials_are_ok {
-        // 401 is auth failure (for login failure) 
-        // 422 is for regex failure / validation error
-        // 409 is for conflict: email or username already taken
+        // One of the fields doesn't match the regex
+        let bad_creds_data: BadRegistrationInputs = BadRegistrationInputs {
+            email_valid: email_valid,
+            username_valid: username_valid,
+            password_valid: password_valid,
+            code: 422,
+        };
 
-        // 401 (not valid here for reg)
-        //return HttpResponse::Unauthorized().body("Invalid username or password");
-
-        // 409 Conflict   (specify whether email or password already exists)
-        return HttpResponse::Conflict().body("Email or password already in use");
-
-        // BUT send a JSON instead of a .body("message")
-        // For ALL of them!
+        println!("bad creds data?");
+        return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY).json(bad_creds_data);
     }
 
+    /* Input credentials are acceptable.
+     * Try to enter them in the database.
+     * if username or email already exists, send a 409
+    */
+
+    let username_or_email_already_exists: bool = true;
+
+    if username_or_email_already_exists {
+        // 409 Conflict   (specify whether email or password already exists)
+        // do it as a regular ErrorResponse JSON
+        return HttpResponse::Conflict().body("Email or password already in use");
+    }
+
+    // WE ARE SUPPOSED TO SEND A JSON... frontend expects a JSON (getting errors now)
     HttpResponse::Ok().finish()
 }
 
@@ -179,17 +197,18 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         println!("empty something");
+        // CHANGE BODY TO JSON
         return HttpResponse::BadRequest().body("Username or password is empty");
     }
 
     if !credentials_are_ok {
+        // CHANGE BODY TO JSON
         return HttpResponse::Unauthorized().body("Invalid username or password");
     }
 
-
     // TRYING TO GET A USER:
 
-    let user_result = if utils::validate_email(&info.username_or_email) {
+    let user_result: Result<Option<db::User>, anyhow::Error> = if utils::validate_email(&info.username_or_email) {
         db::get_user_by_email(&info.username_or_email).await
     } else {
         db::get_user_by_username(&info.username_or_email).await
@@ -212,7 +231,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             println!("password NOT match");
 
             let auth_failure_data: ErrorResponse = ErrorResponse {
-                error: String::from("Invalid Credentialsss"),
+                error: String::from("Invalid Credentials"),
                 code: 401
             };
 

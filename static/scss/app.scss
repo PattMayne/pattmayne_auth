@@ -1,4 +1,4 @@
-
+/*  REMEMBER only to edit the SCSS file  */
 
 /* RAW COLORS */
 $jet: #423841ff;
@@ -12,9 +12,7 @@ $very-light-gray: #f0f0f0;
 
 
 
-/* COLOR SCHEME */
-
-/*
+/* COLOR SCHEME 
         https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
 */
 
@@ -36,12 +34,6 @@ $black: #111111;
   font-family: nue-gothic-round;
   src: url(../fonts/nue-gothic-round.ttf);
 }
-
-@font-face {
-  font-family: 'alte';
-  src: url(../fonts/alte-bold.ttf);
-}
-
 
 @font-face {
   font-family: 'lato';
@@ -77,7 +69,7 @@ $black: #111111;
 
 $header-font: nue-gothic-round;
 $text-font: lato;
-$button-font: alte;
+$button-font: lato;
 
 
 
@@ -123,6 +115,7 @@ h1, h2, h3, h4, h5, h6 {
     background-color: $forest-green;
     color: $white;
     font-family: $button-font, arial;
+    font-weight: bold;
     text-transform: uppercase;
 }
 

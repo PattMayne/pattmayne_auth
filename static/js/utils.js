@@ -5,12 +5,12 @@ export const password_regex = /^[A-Za-z0-9!@#$%^&*()_\-+=\[\]{}:;<>.,?~`|]+$/
 export const email_regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 
 export const username_length_range = {
-    min: 6,
+    min: 2,
     max: 16
 }
 
 export const password_length_range = {
-    min: 6,
+    min: 2,
     max: 16
 }
 

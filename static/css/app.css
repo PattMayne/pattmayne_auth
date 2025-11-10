@@ -14,10 +14,6 @@
   src: url(../fonts/nue-gothic-round.ttf);
 }
 @font-face {
-  font-family: "alte";
-  src: url(../fonts/alte-bold.ttf);
-}
-@font-face {
   font-family: "lato";
   src: url(../fonts/lato-med.ttf);
   font-weight: normal;
@@ -78,7 +74,8 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 5px;
   background-color: #248232;
   color: #f0f0f0;
-  font-family: alte, arial;
+  font-family: lato, arial;
+  font-weight: bold;
   text-transform: uppercase;
 }
 
