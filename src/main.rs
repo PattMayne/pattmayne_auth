@@ -4,6 +4,8 @@ use actix_web::{web, App, HttpServer, HttpResponse, Responder, http::StatusCode,
 use askama::Template;
 use actix_files::Files;
 use serde::{Deserialize, Serialize};
+use time::{ OffsetDateTime, Duration };
+use dotenvy;
 
 
 // local modules
@@ -40,6 +42,18 @@ struct LoginCredentials{
     password: String
 }
 
+
+// Upon successful Registration or login, send back auth token (JWT token)
+#[derive(Serialize)]
+struct AuthData {
+    user_id: u64,
+    jwt: String,
+    refresh_token: String,
+    refresh_token_expires_at: OffsetDateTime,
+    jwt_expires_at: OffsetDateTime,
+}
+
+
 // Askama template macros (to load HTML templates for route functions to use)
 
 #[derive(Template)]
@@ -73,11 +87,6 @@ async fn auth_home() -> impl Responder {
 /* ROOT DOMAIN */
 #[get("/")]
 async fn real_home() -> impl Responder {
-    let _ = db::load_db(); // TODO: catch potential errors
-
-    let pw_hash = db::hash_password(String::from("mottolax"));
-    println!("{}", pw_hash);
-    
 
     // For now we create a static fake user who is not logged in
     let user : User = User { username: String::from("Matt"), is_logged_in: false };
@@ -150,18 +159,15 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
 
     let credentials_are_ok: bool = username_valid && email_valid && password_valid;
 
-    // TO DO: check the database for duplicate email or username (code 409 for failure)
-
     if !credentials_are_ok {
         // One of the fields doesn't match the regex
         let bad_creds_data: BadRegistrationInputs = BadRegistrationInputs {
-            email_valid: email_valid,
-            username_valid: username_valid,
-            password_valid: password_valid,
+            email_valid,
+            username_valid,
+            password_valid,
             code: 422,
         };
 
-        println!("bad creds data?");
         return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY).json(bad_creds_data);
     }
 
@@ -180,16 +186,42 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
         let bad_creds_data: BadRegistrationInputs = BadRegistrationInputs {
             email_valid: !email_exists,
             username_valid: !username_exists,
-            password_valid: password_valid,
+            password_valid,
             code: 409,
         };
 
-        println!("Duplicate data");
         return HttpResponse::Conflict().json(bad_creds_data);
     }
 
-    // WE ARE SUPPOSED TO SEND A JSON... frontend expects a JSON (getting errors now)
-    HttpResponse::Ok().finish()
+    // NOW we've done our pre-checks. Time to add User to DATABASE
+    // We can still send errors if there's a duplicate or a problem
+    
+    let user_id_result = db::add_user(&info.username, &info.email, info.password.clone()).await;
+
+    match user_id_result {
+        Ok(user_id) => {
+            
+            let auth_data: AuthData = AuthData {
+                user_id,
+                jwt: String::from("JWT PLACEHOLDER"),
+                refresh_token: String::from("REFRESH TOKEN PLACEHOLDER"),
+                refresh_token_expires_at: OffsetDateTime::now_utc() + Duration::days(14),
+                jwt_expires_at: OffsetDateTime::now_utc() + Duration::minutes(47),
+            };
+
+            HttpResponse::Ok().json(auth_data)
+        },
+        Err(e) => {
+            eprintln!("Failed to save user to DB: {:?}", e);
+
+            let err_data: ErrorResponse = ErrorResponse {
+                error: e.to_string(),
+                code: 500
+            };
+
+            HttpResponse::InternalServerError().json(err_data)
+        }
+    }
 }
 
 
@@ -199,11 +231,6 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
 */
 #[post("/login")]
 async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
-    println!("Loggin in");
-    println!("Username or Password: {}", info.username_or_email);
-    println!("Password: {}", info.password);
-    
-    let credentials_are_ok: bool = true;
 
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         println!("empty something");
@@ -211,13 +238,10 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
         return HttpResponse::BadRequest().body("Username or password is empty");
     }
 
-    if !credentials_are_ok {
-        // CHANGE BODY TO JSON
-        return HttpResponse::Unauthorized().body("Invalid username or password");
-    }
-
     // TRYING TO GET A USER:
 
+    // Find out if pattern matches email (and retrieve use by email), else treat as username (and
+    // retrieve by username)
     let user_result: Result<Option<db::User>, anyhow::Error> = if utils::validate_email(&info.username_or_email) {
         db::get_user_by_email(&info.username_or_email).await
     } else {
@@ -271,6 +295,10 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // loads env variables for whole app
+    // after this, just call std::env::var(variable_name)
+    dotenvy::dotenv().ok();
+
     HttpServer::new(|| {
         App::new()
             .service(Files::new("/static", "./static"))

@@ -29,4 +29,4 @@ I'll use JSON webtokens and a postgresql database.
  * * or MAYBE they should be in the DB instead.
  * Containerize with Docker
  * Switch to PostgreSQL because bools are bools instead of ints (but maybe that's not important)
- 
+ * move env variable from .env to somewhere more secure for production

@@ -44,11 +44,20 @@ impl User {
 }
 
 
+fn load_db_old() {
+    // get the database URL from the .env file
+    //let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    // create the connection pool
+    //let pool = sqlx::MySqlPool::connect(&db_url).await?;
+
+}
+
 
 pub async fn create_pool() -> Result<MySqlPool> {
      // Load environment variables from .env file.
     // CHECK: Fails if .env file not found, not readable or invalid.
-    let database_url = std::env::var("DATABASE_URL")?;
+    let database_url = dotenvy::var("DATABASE_URL")?;
     
     Ok(MySqlPool::connect(database_url.as_str()).await?)
 }

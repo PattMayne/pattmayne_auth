@@ -60,7 +60,7 @@ const submit_register = async () => {
                         !data.email_valid && err_msgs.push(utils.email_reqs_msg)
                         !data.password_valid && err_msgs.push(utils.password_reqs_msg)
                     } else if (data.code == 409){
-                        // If inputs were unacceptable, backend informs us, we show the message.
+                        // If inputs were duplicates, backend informs us, we show the message.
                         !data.username_valid && err_msgs.push("Username already taken.")
                         !data.email_valid && err_msgs.push("Email already taken.")
                     }
