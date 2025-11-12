@@ -1,6 +1,7 @@
 #![allow(dead_code)] // dead code come on I'm just not using the fields yet.
 
 use actix_web::{web, App, HttpServer, HttpResponse, Responder, http::StatusCode, get, post, web::Redirect};
+use actix_web::cookie::{Cookie, SameSite};
 use askama::Template;
 use actix_files::Files;
 use serde::{Deserialize, Serialize};
@@ -44,7 +45,7 @@ struct LoginCredentials{
 }
 
 
-// Upon successful Registration or login, send back auth token (JWT token)
+// DEPRECATED: Upon successful Registration or login, send back auth token (JWT token)
 #[derive(Serialize)]
 struct AuthData {
     user_id: i32,
@@ -54,6 +55,13 @@ struct AuthData {
     jwt_expires_at: OffsetDateTime,
 }
 
+
+// Upon successful Registration or login, send back auth token (JWT token)
+#[derive(Serialize)]
+struct FreshLoginData {
+    user_id: i32,
+    username: String,
+}
 
 // Askama template macros (to load HTML templates for route functions to use)
 
@@ -274,7 +282,6 @@ async fn error_page() -> HttpResponse {
 
     let error_template = ErrorTemplate { message, title, code };
 
-
     HttpResponse::Ok()
         .content_type("text/html")
         .body(error_template.render().unwrap())
@@ -288,10 +295,14 @@ async fn error_page() -> HttpResponse {
 #[post("/login")]
 async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 
+    // Check for empty fields
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         println!("empty something");
-        // CHANGE BODY TO JSON
-        return HttpResponse::BadRequest().body("Username or password is empty");
+        return HttpResponse::Unauthorized().json(
+            ErrorResponse {
+            error: String::from("Invalid Credentials: Empty Field."),
+            code: 401
+        });
     }
 
     // TRYING TO GET A USER:
@@ -313,48 +324,70 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             // Now check the password
             if db::verify_password(&info.password, user.get_password_hash()) {
                 println!("password match");
-                // generate JWT. Don't send user obj (with password) back
-                let jwt_secret_result = std::env::var("JWT_SECRET");
 
+                // AT THIS POINT we're doing the same thing in login and reg.
+                // This should all be in a function.
+                // BUT FIRST make this save to HTTP cookie INSTEAD of sending JWT in json
+
+                // generate JWT. Don't send user obj (with password) back
+                let jwt_secret_result: Result<String, std::env::VarError> = std::env::var("JWT_SECRET");
+                let jwt_err_string: &str = "JSON Web Token Error: ";
+
+                // Checking that the secret exists
                 match jwt_secret_result {
                     Ok(jwt_secret) => {
-                        let jwt_result = auth::generate_jwt(user.get_id(), user.get_role().to_owned(), jwt_secret.as_bytes());
 
+                        // Secret exists. Now let's generate the actual token
+                        let jwt_result: Result<String, jsonwebtoken::errors::Error> = auth::generate_jwt(
+                            user.get_id(),
+                            user.get_role().to_owned(),
+                            jwt_secret.as_bytes()
+                        );
+
+                        // Make sure we really got a token
                         match jwt_result {
                             Ok(jwt) => {
-         
-                                let auth_data: AuthData = AuthData {
-                                    user_id: user.get_id(),
+                                // TOTAL SUCCESS: Returning auth data in a json
+                                let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
+
+                                let jwt_cookie: Cookie<'_> = build_token_cookie(
                                     jwt,
-                                    refresh_token: String::from("PLACEHOLDER_REFRESH_TOKEN"),
-                                    refresh_token_expires_at: OffsetDateTime::now_utc(),
-                                    jwt_expires_at: OffsetDateTime::now_utc() + Duration::minutes(5),
-                                };
+                                    String::from("jwt"));
+                                let refresh_token_cookie: Cookie<'_> = build_token_cookie(
+                                    refresh_token,
+                                    String::from("refresh_token"));
 
-
-                                return HttpResponse::Ok().json(auth_data);
+                                return HttpResponse::Ok()
+                                    .cookie(jwt_cookie)
+                                    .cookie(refresh_token_cookie)
+                                    .json(
+                                        FreshLoginData {
+                                            user_id: user.get_id(),
+                                            username: user.get_username().to_owned()
+                                });
                                    
                             },
 
+                            // No token. Show error
                             Err(e) => {
-                                let err_data: ErrorResponse = ErrorResponse {
-                                    error: e.to_string(),
-                                    code: 404
-                                };
-
-                                return HttpResponse::InternalServerError().json(err_data);
+                                // Returning error data in a json
+                                return HttpResponse::InternalServerError().json(
+                                    ErrorResponse {
+                                        error: format!("{}{}", jwt_err_string, e),
+                                        code: 404
+                                });
                             }
-
-                        }
-                           
+                        }          
                     },
-                    Err(e) => {
-                        let err_data: ErrorResponse = ErrorResponse {
-                            error: e.to_string(),
-                            code: 404
-                        };
 
-                        return HttpResponse::InternalServerError().json(err_data);
+                    // No JWT secret. Show error
+                    Err(e) => {
+                        // Returning error data in a json
+                        return HttpResponse::InternalServerError().json(
+                            ErrorResponse {
+                                error: format!("{}{}", jwt_err_string, e),
+                                code: 404
+                        });
                     },
                 }
             }
@@ -378,15 +411,13 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             HttpResponse::NotFound().json(lookup_failure_data)
         },
         Err(e) => {
-            let err_data: ErrorResponse = ErrorResponse {
+            // Worse than not finding a user. Something broke.
+            HttpResponse::InternalServerError().json(ErrorResponse {
                 error: e.to_string(),
-                code: 404
-            };
-
-            HttpResponse::InternalServerError().json(err_data)
+                code: 500
+            })
         }
     }
-
 
 }
 
@@ -418,6 +449,27 @@ async fn main() -> std::io::Result<()> {
 }
 
 
+/**
+ * Setting a cookie only works for browsing within the auth site
+ * For external app authentication we will implement OAuth2
+ */
+fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
+
+    // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
+    let secure: bool = std::env::var("COOKIE_SECURE")
+        .map(|value: String| value == "true")
+        .unwrap_or(false);
+
+    Cookie::build(name, token)
+        .http_only(true)
+        .secure(secure) 
+        .same_site(SameSite::Lax)
+        .path("/")
+        .finish()
+}
+
+
+
 /*
  * ROUTES:
  *
@@ -425,6 +477,8 @@ async fn main() -> std::io::Result<()> {
  *  -index (shows whether logged in or not, and links)
  *  -login (login page to take credentials)
  *  -register (register page to take credentials)
+ *  -error
+ *  -dashboard
  *
  *  POST:
  *  -login (returns JWT (JSON obj with signature))

@@ -64,8 +64,8 @@ impl User {
     }
 
     pub fn get_id(&self) -> i32 { self.id }
-
     pub fn get_role(&self) -> &String { &self.role }
+    pub fn get_username(&self) -> &String { &self.username }
 
 }
 
@@ -121,7 +121,9 @@ pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
 
     Ok(sqlx::query_as!(
             User,
-            "SELECT id, username, email, first_name, last_name, role, password_hash, created_timestamp, email_verified FROM users WHERE username = ?",
+            "SELECT id, username, email, first_name,
+                last_name, role, password_hash, created_timestamp,
+                email_verified FROM users WHERE username = ?",
             username
         ).fetch_optional(&pool).await?)
 }
@@ -139,8 +141,6 @@ pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
         email
     ).fetch_optional(&pool).await?)
 }
-
-
 
 
 
