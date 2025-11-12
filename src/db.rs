@@ -23,7 +23,7 @@ struct Count {
 
 #[derive(serde::Serialize)]
 pub struct User {
-    id: i64,
+    id: i32,
     username: String,
     email: String,
     first_name: Option<String>,
@@ -42,7 +42,7 @@ impl User {
     }
 
     pub fn new(
-        id: i64,
+        id: i32,
         username: String,
         email: String,
         first_name: Option<String>,
@@ -59,9 +59,13 @@ impl User {
         }
     }
 
-    pub fn get_hashed_password(&self) -> String {
-        self.password_hash.clone()
+    pub fn get_password_hash(&self) -> &String {
+        &self.password_hash
     }
+
+    pub fn get_id(&self) -> i32 { self.id }
+
+    pub fn get_role(&self) -> &String { &self.role }
 
 }
 
@@ -198,7 +202,7 @@ pub async fn email_taken(email: &String) -> bool {
 
 // Add new user to database
 
-pub async fn add_user(username: &String, email: &String, password: String) -> Result<u64, anyhow::Error> {
+pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
 
     // map_err changes a possible error into the return type of error I return in the closure
     // This is simpler and more idiomatic than doing a match
@@ -224,7 +228,7 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
             anyhow!("Could not save user to database: {e}")
         })?;
 
-    Ok(result.last_insert_id())
+    Ok(result.last_insert_id() as i32)
 }
 
 

@@ -11,6 +11,7 @@ use dotenvy;
 // local modules
 mod db;
 mod utils;
+mod auth;
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -46,7 +47,7 @@ struct LoginCredentials{
 // Upon successful Registration or login, send back auth token (JWT token)
 #[derive(Serialize)]
 struct AuthData {
-    user_id: u64,
+    user_id: i32,
     jwt: String,
     refresh_token: String,
     refresh_token_expires_at: OffsetDateTime,
@@ -310,10 +311,52 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             println!("found a user");
 
             // Now check the password
-            if db::verify_password(&info.password, &user.get_hashed_password()) {
+            if db::verify_password(&info.password, user.get_password_hash()) {
                 println!("password match");
-                // Here I should actually generate a login token
-                return HttpResponse::Ok().json(user);
+                // generate JWT. Don't send user obj (with password) back
+                let jwt_secret_result = std::env::var("JWT_SECRET");
+
+                match jwt_secret_result {
+                    Ok(jwt_secret) => {
+                        let jwt_result = auth::generate_jwt(user.get_id(), user.get_role().to_owned(), jwt_secret.as_bytes());
+
+                        match jwt_result {
+                            Ok(jwt) => {
+         
+                                let auth_data: AuthData = AuthData {
+                                    user_id: user.get_id(),
+                                    jwt,
+                                    refresh_token: String::from("PLACEHOLDER_REFRESH_TOKEN"),
+                                    refresh_token_expires_at: OffsetDateTime::now_utc(),
+                                    jwt_expires_at: OffsetDateTime::now_utc() + Duration::minutes(5),
+                                };
+
+
+                                return HttpResponse::Ok().json(auth_data);
+                                   
+                            },
+
+                            Err(e) => {
+                                let err_data: ErrorResponse = ErrorResponse {
+                                    error: e.to_string(),
+                                    code: 404
+                                };
+
+                                return HttpResponse::InternalServerError().json(err_data);
+                            }
+
+                        }
+                           
+                    },
+                    Err(e) => {
+                        let err_data: ErrorResponse = ErrorResponse {
+                            error: e.to_string(),
+                            code: 404
+                        };
+
+                        return HttpResponse::InternalServerError().json(err_data);
+                    },
+                }
             }
 
             // Auth clearly failed
@@ -367,6 +410,7 @@ async fn main() -> std::io::Result<()> {
             .service(home)
             .service(real_home)
             .service(dashboard_page)
+            .service(error_page)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
