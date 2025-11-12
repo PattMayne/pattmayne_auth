@@ -79,6 +79,25 @@ struct RegisterTemplate<'a> {
 }
 
 
+#[derive(Template)]
+#[template(path ="error.html")]
+struct ErrorTemplate<'a> {
+    title: &'a str,
+    message: &'a str,
+    code: &'a str,
+}
+
+
+#[derive(Template)]
+#[template(path ="dashboard.html")]
+struct DashboardTemplate<'a> {
+    title: &'a str,
+    user_data: &'a db::User,
+}
+
+
+
+
 async fn auth_home() -> impl Responder {
     Redirect::to("/auth/login")
 }
@@ -87,12 +106,7 @@ async fn auth_home() -> impl Responder {
 /* ROOT DOMAIN */
 #[get("/")]
 async fn real_home() -> impl Responder {
-
-    // For now we create a static fake user who is not logged in
-    let user : User = User { username: String::from("Matt"), is_logged_in: false };
-
-    // create a ternary for a message based on whether fake user is logged in
-    let state_string: &str = if user.is_logged_in {"LOGGED IN"} else {"NOT LOGGED IN"};
+    let state_string: &str = "NOT LOGGED IN";
     let title: &str = "Pattmayne Games";
 
     let home_template: HomeTemplate<'_> = HomeTemplate { message: state_string, title: title };
@@ -105,11 +119,7 @@ async fn real_home() -> impl Responder {
 
 /* LOGIN PAGE ROUTE FUNCTION */
 async fn login_page() -> impl Responder {
-    
-    let user : User = User { username: String::from("Matt"), is_logged_in: false };
-
-    // create a ternary for a message based on whether fake user is logged in
-    let state_string: &str = if user.is_logged_in {"ALREADY LOGGED IN"} else {"PLEASE LOG IN"};
+    let state_string: &str = "PLEASE LOG IN";
     let title: &str = "LOGIN";
 
     let login_template = LoginTemplate { message: state_string, title: title };
@@ -123,11 +133,7 @@ async fn login_page() -> impl Responder {
 
 /* REGISTER PAGE ROUTE FUNCTION */
 async fn register_page() -> impl Responder {
-    
-    let user : User = User { username: String::from("Matt"), is_logged_in: false };
-
-    // create a ternary for a message based on whether fake user is logged in
-    let state_string: &str = if user.is_logged_in {"ALREADY LOGGED IN"} else {"PLEASE LOG IN"};
+    let state_string: &str = "Please Register";
     let title: &str = "REGISTER";
 
     let register_template = RegisterTemplate { message: state_string, title: title };
@@ -226,6 +232,55 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
 
 
 
+#[get("/dashboard")]
+async fn dashboard_page() -> HttpResponse {
+
+    // must do auth check here
+
+    let message: &str = "Welcome to your error";
+    let title: &str = "ERROR TITLE";
+    let code: &str = "500?";
+
+    let user: db::User = db::User::new(
+        1,
+        String::from("fake username"),
+        String::from("email@address"),
+        Some(String::from("fake first name")),
+        Some(String::from("fake last name")),
+        String::from("player"),
+        String::from("fake password hash"),
+        OffsetDateTime::now_utc(),
+        true);
+
+    let dashboard_template = DashboardTemplate { user_data: &user, title };
+
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(dashboard_template.render().unwrap())
+
+}
+
+
+
+
+#[get("/error")]
+async fn error_page() -> HttpResponse {
+
+    let message: &str = "Welcome to your error";
+    let title: &str = "ERROR TITLE";
+    let code: &str = "500?";
+
+    let error_template = ErrorTemplate { message, title, code };
+
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(error_template.render().unwrap())
+
+}
+
+
 /** LOGIN
  * Get user data, check it against the DB & see if it's right.
 */
@@ -255,7 +310,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             println!("found a user");
 
             // Now check the password
-            if db::verify_password(&info.password, &user.password_hash) {
+            if db::verify_password(&info.password, &user.get_hashed_password()) {
                 println!("password match");
                 // Here I should actually generate a login token
                 return HttpResponse::Ok().json(user);
@@ -311,18 +366,11 @@ async fn main() -> std::io::Result<()> {
             .service(register_post))
             .service(home)
             .service(real_home)
+            .service(dashboard_page)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
-}
-
-
-
-
-struct User {
-    username: String,
-    is_logged_in: bool,
 }
 
 

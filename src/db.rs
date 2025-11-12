@@ -29,7 +29,7 @@ pub struct User {
     first_name: Option<String>,
     last_name: Option<String>,
     role: String,
-    pub password_hash: String,
+    password_hash: String,
     created_timestamp: OffsetDateTime,
     email_verified: i8 // actually a bool but mysql doesn't do "real" bools
 }
@@ -39,6 +39,28 @@ impl User {
 
     pub fn get_email_verified(&self) -> bool {
         self.email_verified != 0
+    }
+
+    pub fn new(
+        id: i64,
+        username: String,
+        email: String,
+        first_name: Option<String>,
+        last_name: Option<String>,
+        role: String,
+        password_hash: String,
+        created_timestamp: OffsetDateTime,
+        email_verified: bool
+    ) -> Self {
+        User {
+            id, username, email, first_name, last_name, role,
+            password_hash, created_timestamp,
+            email_verified: if email_verified { 1 } else { 0 }
+        }
+    }
+
+    pub fn get_hashed_password(&self) -> String {
+        self.password_hash.clone()
     }
 
 }
