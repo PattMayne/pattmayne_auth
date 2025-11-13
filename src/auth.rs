@@ -1,6 +1,5 @@
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, errors::Result as JWTResult};
-use serde::{Serialize, Deserialize};
-use std::env;
+use jsonwebtoken::{encode, Header, EncodingKey };
+use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
 
 
@@ -70,5 +69,4 @@ pub fn generate_jwt(user_id: i32, role: String, secret: &[u8])
     };
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(secret))
-
 }

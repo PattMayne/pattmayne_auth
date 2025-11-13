@@ -1,11 +1,9 @@
 // I'm actually using MariaDB which is supposedly a drop-in replacement for MySQL
 
-use sqlx::{MySqlPool, Pool, mysql::MySqlPoolOptions, Connection, MySqlConnection};
+use sqlx::{MySqlPool };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use password_hash::{SaltString, PasswordHash};
-use std::error::Error;
-use std::env;
 use time::OffsetDateTime;
 use anyhow::{ Result, anyhow };
 use serde;
@@ -243,6 +241,3 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
 
     Ok(result.last_insert_id() as i32)
 }
-
-
-
