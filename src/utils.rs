@@ -1,5 +1,4 @@
 use regex::Regex;
-use actix_web::cookie::{Cookie, SameSite};
 
 // INPUT VALIDATIONS
 
@@ -40,26 +39,5 @@ pub fn validate_password(password: &String) -> bool {
 pub fn validate_email(email: &String) -> bool {
     let reg: Regex = Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$").unwrap();
     reg.is_match(&email)
-}
-
-
-
-/**
- * Setting a cookie only works for browsing within the auth site
- * For external app authentication we will implement OAuth2
- */
-pub fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
-
-    // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
-    let secure: bool = std::env::var("COOKIE_SECURE")
-        .map(|value: String| value == "true")
-        .unwrap_or(false);
-
-    Cookie::build(name, token)
-        .http_only(true)
-        .secure(secure) 
-        .same_site(SameSite::Lax)
-        .path("/")
-        .finish()
 }
 

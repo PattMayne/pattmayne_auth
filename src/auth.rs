@@ -1,6 +1,7 @@
 use jsonwebtoken::{encode, Header, EncodingKey };
 use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
+use actix_web::cookie::{Cookie, SameSite};
 
 
 /*
@@ -69,4 +70,26 @@ pub fn generate_jwt(user_id: i32, role: String, secret: &[u8])
     };
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(secret))
+}
+
+
+
+
+/**
+ * Setting a cookie only works for browsing within the auth site
+ * For external app authentication we will implement OAuth2
+ */
+pub fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
+
+    // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
+    let secure: bool = std::env::var("COOKIE_SECURE")
+        .map(|value: String| value == "true")
+        .unwrap_or(false);
+
+    Cookie::build(name, token)
+        .http_only(true)
+        .secure(secure) 
+        .same_site(SameSite::Lax)
+        .path("/")
+        .finish()
 }

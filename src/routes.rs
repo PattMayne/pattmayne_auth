@@ -1,4 +1,4 @@
-use actix_web::{ web, HttpResponse, Responder, http::StatusCode, get, post, web::Redirect };
+use actix_web::{ web, HttpResponse, HttpRequest, Responder, http::StatusCode, get, post, web::Redirect };
 use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
@@ -309,10 +309,10 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
                     // TOTAL SUCCESS: Returning auth data in a json
                     let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
 
-                    let jwt_cookie: Cookie<'_> = utils::build_token_cookie(
+                    let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
                         jwt,
                         String::from("jwt"));
-                    let refresh_token_cookie: Cookie<'_> = utils::build_token_cookie(
+                    let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
                         refresh_token,
                         String::from("refresh_token"));
 
@@ -359,7 +359,26 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 
 /* ROOT DOMAIN */
 #[get("/")]
-async fn home() -> impl Responder {
+async fn home(req: HttpRequest) -> impl Responder {
+
+    // CHECK for COOKIE
+
+    // IF jwt token exists send to DASHBOARD
+    // ELSE send to LOGIN
+    // change header based on login status
+
+    if let Some(cookie) = req.cookie("jwt") {
+        let jwt = cookie.value();
+        // Validate JWT here
+        println!("JWT is HERE: {}", jwt);
+    } else {
+        // Not authenticated
+        println!("JWT is MISSING");
+    }
+
+
+    // ORIGINAL CODE FOLLOWS
+
     let state_string: &str = "NOT LOGGED IN";
     let title: &str = "Pattmayne Games";
 
@@ -406,11 +425,10 @@ pub async fn register_page() -> impl Responder {
 
 #[get("/dashboard")]
 pub async fn dashboard_page() -> HttpResponse {
-
     // must do auth check here
+    // Don't send entire user... only certain data.
 
     let title: &str = "ERROR TITLE";
-
     let user: db::User = db::User::new(
         1,
         String::from("fake username"),
@@ -423,7 +441,6 @@ pub async fn dashboard_page() -> HttpResponse {
         true);
 
     let dashboard_template: DashboardTemplate<'_> = DashboardTemplate { user_data: &user, title };
-
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -439,7 +456,7 @@ async fn error_page() -> HttpResponse {
     let title: &str = "ERROR TITLE";
     let code: &str = "500?";
 
-    let error_template = ErrorTemplate { message, title, code };
+    let error_template: ErrorTemplate<'_> = ErrorTemplate { message, title, code };
 
     HttpResponse::Ok()
         .content_type("text/html")
