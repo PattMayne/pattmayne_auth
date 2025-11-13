@@ -143,6 +143,19 @@ pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
 }
 
 
+pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        User,
+        "SELECT id, username, email,
+            first_name, last_name, role,
+            password_hash, created_timestamp,
+            email_verified FROM users WHERE id = ?",
+        id
+    ).fetch_optional(&pool).await?)
+}
+
 
 // Pre-check for duplicates
 

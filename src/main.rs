@@ -156,6 +156,7 @@ async fn register_page() -> impl Responder {
 #[get("/home")]
 async fn home() -> impl Responder { "You are home" }
 
+
 /*  POST ROUTES  */
 
 
@@ -211,20 +212,41 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
     // NOW we've done our pre-checks. Time to add User to DATABASE
     // We can still send errors if there's a duplicate or a problem
     
-    let user_id_result = db::add_user(&info.username, &info.email, info.password.clone()).await;
+    let user_id_result: Result<i32, anyhow::Error> = db::add_user(
+        &info.username,
+        &info.email,
+        info.password.clone()
+    ).await;
 
     match user_id_result {
         Ok(user_id) => {
-            
-            let auth_data: AuthData = AuthData {
-                user_id,
-                jwt: String::from("JWT PLACEHOLDER"),
-                refresh_token: String::from("REFRESH TOKEN PLACEHOLDER"),
-                refresh_token_expires_at: OffsetDateTime::now_utc() + Duration::days(14),
-                jwt_expires_at: OffsetDateTime::now_utc() + Duration::minutes(47),
-            };
 
-            HttpResponse::Ok().json(auth_data)
+            // get user object from DB
+            let user_result: Result<Option<db::User>, anyhow::Error> =
+                db::get_user_by_id(user_id).await;
+            
+            match user_result {
+                Ok(Some(user)) => {
+                    println!("Retrieved the user that we just saved");
+                    // User may now receive JWT and refresh token.
+                    return give_user_auth_cookies(user);
+                },
+                Ok(None) => {
+                    let lookup_failure_data: ErrorResponse = ErrorResponse {
+                        error: String::from("User not found."),
+                        code: 404
+                    };
+
+                    return HttpResponse::NotFound().json(lookup_failure_data);
+                },
+                Err(e) => {
+                    // Worse than not finding a user. Something broke.
+                    return HttpResponse::InternalServerError().json(ErrorResponse {
+                        error: e.to_string(),
+                        code: 500
+                    });
+                }
+            }
         },
         Err(e) => {
             eprintln!("Failed to save user to DB: {:?}", e);
@@ -238,6 +260,202 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
         }
     }
 }
+
+
+/** LOGIN
+ * Get user data, check it against the DB & see if it's right.
+*/
+#[post("/login")]
+async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
+
+    // Check for empty fields
+    if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
+        println!("empty something");
+        return HttpResponse::Unauthorized().json(
+            ErrorResponse {
+            error: String::from("Invalid Credentials: Empty Field."),
+            code: 401
+        });
+    }
+
+    // TRYING TO GET A USER:
+
+    // Find out if pattern matches email (and retrieve use by email), else treat as username (and
+    // retrieve by username)
+    let user_result: Result<Option<db::User>, anyhow::Error> = if utils::validate_email(&info.username_or_email) {
+        db::get_user_by_email(&info.username_or_email).await
+    } else {
+        db::get_user_by_username(&info.username_or_email).await
+    };
+
+    // NOW we can do PATTERN MATCHING to return something
+
+    match user_result {
+        Ok(Some(user)) => {
+            println!("found a user");
+
+            // Now check the password
+            if db::verify_password(&info.password, user.get_password_hash()) {
+                println!("password match");
+
+                // User may now receive JWT and refresh token.
+                return give_user_auth_cookies(user);
+            }
+
+            // Auth clearly failed
+            println!("password NOT match");
+
+            let auth_failure_data: ErrorResponse = ErrorResponse {
+                error: String::from("Invalid Credentials"),
+                code: 401
+            };
+
+            HttpResponse::Unauthorized().json(auth_failure_data)
+        },
+        Ok(None) => {
+            let lookup_failure_data: ErrorResponse = ErrorResponse {
+                error: String::from("User not found."),
+                code: 404
+            };
+
+            HttpResponse::NotFound().json(lookup_failure_data)
+        },
+        Err(e) => {
+            // Worse than not finding a user. Something broke.
+            HttpResponse::InternalServerError().json(ErrorResponse {
+                error: e.to_string(),
+                code: 500
+            })
+        }
+    }
+
+}
+
+
+
+
+/**
+ * We only do this once the user has been authenticated.
+ * Calls functions to generate JWT and refresh token,
+ * puts them in cookies and sends the response,
+ * along with some user info in a JSON.
+ */
+fn give_user_auth_cookies(user: db::User) -> HttpResponse {
+
+    // generate JWT. Don't send user obj (with password) back
+    let jwt_secret_result: Result<String, std::env::VarError> = std::env::var("JWT_SECRET");
+    let jwt_err_string: &str = "JSON Web Token Error: ";
+
+    // Checking that the secret exists
+    match jwt_secret_result {
+        Ok(jwt_secret) => {
+
+            // Secret exists. Now let's generate the actual token
+            let jwt_result: Result<String, jsonwebtoken::errors::Error> = auth::generate_jwt(
+                user.get_id(),
+                user.get_role().to_owned(),
+                jwt_secret.as_bytes()
+            );
+
+            // Make sure we really got a token
+            match jwt_result {
+                Ok(jwt) => {
+                    // TOTAL SUCCESS: Returning auth data in a json
+                    let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
+
+                    let jwt_cookie: Cookie<'_> = build_token_cookie(
+                        jwt,
+                        String::from("jwt"));
+                    let refresh_token_cookie: Cookie<'_> = build_token_cookie(
+                        refresh_token,
+                        String::from("refresh_token"));
+
+                    return HttpResponse::Ok()
+                        .cookie(jwt_cookie)
+                        .cookie(refresh_token_cookie)
+                        .json(
+                            FreshLoginData {
+                                user_id: user.get_id(),
+                                username: user.get_username().to_owned()
+                    });
+                        
+                },
+
+                // No token. Show error
+                Err(e) => {
+                    // Returning error data in a json
+                    return HttpResponse::InternalServerError().json(
+                        ErrorResponse {
+                            error: format!("{}{}", jwt_err_string, e),
+                            code: 404
+                    });
+                }
+            }          
+        },
+
+        // No JWT secret. Show error
+        Err(e) => {
+            // Returning error data in a json
+            return HttpResponse::InternalServerError().json(
+                ErrorResponse {
+                    error: format!("{}{}", jwt_err_string, e),
+                    code: 404
+            });
+        },
+    }
+}
+
+
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    // loads env variables for whole app
+    // after this, just call std::env::var(variable_name)
+    dotenvy::dotenv().ok();
+
+    HttpServer::new(|| {
+        App::new()
+            .service(Files::new("/static", "./static"))
+            .service(
+                web::scope("/auth")
+                    .route("/login", web::get().to(login_page))
+                    .route("/register", web::get().to(register_page))
+                    .route("/", web::get().to(auth_home))
+            .service(login_post)
+            .service(register_post))
+            .service(home)
+            .service(real_home)
+            .service(dashboard_page)
+            .service(error_page)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
+}
+
+
+/**
+ * Setting a cookie only works for browsing within the auth site
+ * For external app authentication we will implement OAuth2
+ */
+fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
+
+    // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
+    let secure: bool = std::env::var("COOKIE_SECURE")
+        .map(|value: String| value == "true")
+        .unwrap_or(false);
+
+    Cookie::build(name, token)
+        .http_only(true)
+        .secure(secure) 
+        .same_site(SameSite::Lax)
+        .path("/")
+        .finish()
+}
+
+
+
+// OTHER ROUTES
 
 
 
@@ -286,186 +504,6 @@ async fn error_page() -> HttpResponse {
         .content_type("text/html")
         .body(error_template.render().unwrap())
 
-}
-
-
-/** LOGIN
- * Get user data, check it against the DB & see if it's right.
-*/
-#[post("/login")]
-async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
-
-    // Check for empty fields
-    if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
-        println!("empty something");
-        return HttpResponse::Unauthorized().json(
-            ErrorResponse {
-            error: String::from("Invalid Credentials: Empty Field."),
-            code: 401
-        });
-    }
-
-    // TRYING TO GET A USER:
-
-    // Find out if pattern matches email (and retrieve use by email), else treat as username (and
-    // retrieve by username)
-    let user_result: Result<Option<db::User>, anyhow::Error> = if utils::validate_email(&info.username_or_email) {
-        db::get_user_by_email(&info.username_or_email).await
-    } else {
-        db::get_user_by_username(&info.username_or_email).await
-    };
-
-    // NOW we can do PATTERN MATCHING to return something
-
-    match user_result {
-        Ok(Some(user)) => {
-            println!("found a user");
-
-            // Now check the password
-            if db::verify_password(&info.password, user.get_password_hash()) {
-                println!("password match");
-
-                // AT THIS POINT we're doing the same thing in login and reg.
-                // This should all be in a function.
-                // BUT FIRST make this save to HTTP cookie INSTEAD of sending JWT in json
-
-                // generate JWT. Don't send user obj (with password) back
-                let jwt_secret_result: Result<String, std::env::VarError> = std::env::var("JWT_SECRET");
-                let jwt_err_string: &str = "JSON Web Token Error: ";
-
-                // Checking that the secret exists
-                match jwt_secret_result {
-                    Ok(jwt_secret) => {
-
-                        // Secret exists. Now let's generate the actual token
-                        let jwt_result: Result<String, jsonwebtoken::errors::Error> = auth::generate_jwt(
-                            user.get_id(),
-                            user.get_role().to_owned(),
-                            jwt_secret.as_bytes()
-                        );
-
-                        // Make sure we really got a token
-                        match jwt_result {
-                            Ok(jwt) => {
-                                // TOTAL SUCCESS: Returning auth data in a json
-                                let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
-
-                                let jwt_cookie: Cookie<'_> = build_token_cookie(
-                                    jwt,
-                                    String::from("jwt"));
-                                let refresh_token_cookie: Cookie<'_> = build_token_cookie(
-                                    refresh_token,
-                                    String::from("refresh_token"));
-
-                                return HttpResponse::Ok()
-                                    .cookie(jwt_cookie)
-                                    .cookie(refresh_token_cookie)
-                                    .json(
-                                        FreshLoginData {
-                                            user_id: user.get_id(),
-                                            username: user.get_username().to_owned()
-                                });
-                                   
-                            },
-
-                            // No token. Show error
-                            Err(e) => {
-                                // Returning error data in a json
-                                return HttpResponse::InternalServerError().json(
-                                    ErrorResponse {
-                                        error: format!("{}{}", jwt_err_string, e),
-                                        code: 404
-                                });
-                            }
-                        }          
-                    },
-
-                    // No JWT secret. Show error
-                    Err(e) => {
-                        // Returning error data in a json
-                        return HttpResponse::InternalServerError().json(
-                            ErrorResponse {
-                                error: format!("{}{}", jwt_err_string, e),
-                                code: 404
-                        });
-                    },
-                }
-            }
-
-            // Auth clearly failed
-            println!("password NOT match");
-
-            let auth_failure_data: ErrorResponse = ErrorResponse {
-                error: String::from("Invalid Credentials"),
-                code: 401
-            };
-
-            HttpResponse::Unauthorized().json(auth_failure_data)
-        },
-        Ok(None) => {
-            let lookup_failure_data: ErrorResponse = ErrorResponse {
-                error: String::from("User not found."),
-                code: 404
-            };
-
-            HttpResponse::NotFound().json(lookup_failure_data)
-        },
-        Err(e) => {
-            // Worse than not finding a user. Something broke.
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                error: e.to_string(),
-                code: 500
-            })
-        }
-    }
-
-}
-
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    // loads env variables for whole app
-    // after this, just call std::env::var(variable_name)
-    dotenvy::dotenv().ok();
-
-    HttpServer::new(|| {
-        App::new()
-            .service(Files::new("/static", "./static"))
-            .service(
-                web::scope("/auth")
-                    .route("/login", web::get().to(login_page))
-                    .route("/register", web::get().to(register_page))
-                    .route("/", web::get().to(auth_home))
-            .service(login_post)
-            .service(register_post))
-            .service(home)
-            .service(real_home)
-            .service(dashboard_page)
-            .service(error_page)
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
-}
-
-
-/**
- * Setting a cookie only works for browsing within the auth site
- * For external app authentication we will implement OAuth2
- */
-fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
-
-    // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
-    let secure: bool = std::env::var("COOKIE_SECURE")
-        .map(|value: String| value == "true")
-        .unwrap_or(false);
-
-    Cookie::build(name, token)
-        .http_only(true)
-        .secure(secure) 
-        .same_site(SameSite::Lax)
-        .path("/")
-        .finish()
 }
 
 
