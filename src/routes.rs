@@ -1,4 +1,7 @@
-use actix_web::{ web, HttpResponse, HttpRequest, Responder, http::StatusCode, get, post, web::Redirect };
+use actix_web::{
+    web, HttpResponse, HttpRequest,
+    Responder, http::StatusCode,
+    get, post, web::Redirect };
 use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
@@ -67,6 +70,7 @@ struct LoginCredentials{
 struct HomeTemplate<'a> {
     title: &'a str,
     message: &'a str,
+    logged_in: bool,
 }
 
 
@@ -75,6 +79,7 @@ struct HomeTemplate<'a> {
 struct LoginTemplate<'a> {
     title: &'a str,
     message: &'a str,
+    logged_in: bool,
 }
 
 
@@ -83,6 +88,7 @@ struct LoginTemplate<'a> {
 struct RegisterTemplate<'a> {
     title: &'a str,
     message: &'a str,
+    logged_in: bool,
 }
 
 
@@ -92,6 +98,7 @@ struct ErrorTemplate<'a> {
     title: &'a str,
     message: &'a str,
     code: &'a str,
+    logged_in: bool,
 }
 
 
@@ -100,6 +107,7 @@ struct ErrorTemplate<'a> {
 struct DashboardTemplate<'a> {
     title: &'a str,
     user_data: &'a db::User,
+    logged_in: bool,
 }
 
 
@@ -274,10 +282,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             })
         }
     }
-
 }
-
-
 
 
 /**
@@ -289,7 +294,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 
     // generate JWT. Don't send user obj (with password) back
-    let jwt_secret_result: Result<String, std::env::VarError> = std::env::var("JWT_SECRET");
+    let jwt_secret_result: Result<String, std::env::VarError> = auth::get_jwt_secret();
     let jwt_err_string: &str = "JSON Web Token Error: ";
 
     // Checking that the secret exists
@@ -299,6 +304,7 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             // Secret exists. Now let's generate the actual token
             let jwt_result: Result<String, jsonwebtoken::errors::Error> = auth::generate_jwt(
                 user.get_id(),
+                user.get_username().to_owned(),
                 user.get_role().to_owned(),
                 jwt_secret.as_bytes()
             );
@@ -324,7 +330,6 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
                                 user_id: user.get_id(),
                                 username: user.get_username().to_owned()
                     });
-                        
                 },
 
                 // No token. Show error
@@ -360,29 +365,21 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 /* ROOT DOMAIN */
 #[get("/")]
 async fn home(req: HttpRequest) -> impl Responder {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    // CHECK for COOKIE
-
-    // IF jwt token exists send to DASHBOARD
-    // ELSE send to LOGIN
-    // change header based on login status
-
-    if let Some(cookie) = req.cookie("jwt") {
-        let jwt = cookie.value();
-        // Validate JWT here
-        println!("JWT is HERE: {}", jwt);
-    } else {
-        // Not authenticated
-        println!("JWT is MISSING");
-    }
-
+    // TEST PRINTING NOW but we will use this to display username later
+    println!("role: {}", user_req_data.role);
 
     // ORIGINAL CODE FOLLOWS
 
-    let state_string: &str = "NOT LOGGED IN";
+    let state_string: &str = if user_req_data.logged_in { "YOU ARE LOGGED IN" } else { "NOT LOGGED IN" };
     let title: &str = "Pattmayne Games";
 
-    let home_template: HomeTemplate<'_> = HomeTemplate { message: state_string, title: title };
+    let home_template: HomeTemplate<'_> = HomeTemplate {
+        message: state_string,
+        title: title,
+        logged_in: user_req_data.logged_in
+    };
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -397,11 +394,16 @@ pub async fn auth_home() -> impl Responder {
 
 
 /* LOGIN PAGE ROUTE FUNCTION */
-pub async fn login_page() -> impl Responder {
+pub async fn login_page(req: HttpRequest) -> impl Responder {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
     let state_string: &str = "PLEASE LOG IN";
     let title: &str = "LOGIN";
 
-    let login_template = LoginTemplate { message: state_string, title: title };
+    let login_template = LoginTemplate {
+        message: state_string,
+        title: title,
+        logged_in: user_req_data.logged_in
+    };
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -411,11 +413,15 @@ pub async fn login_page() -> impl Responder {
 
 
 /* REGISTER PAGE ROUTE FUNCTION */
-pub async fn register_page() -> impl Responder {
+pub async fn register_page(req: HttpRequest) -> impl Responder {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
     let state_string: &str = "Please Register";
     let title: &str = "REGISTER";
 
-    let register_template = RegisterTemplate { message: state_string, title: title };
+    let register_template: RegisterTemplate<'_> = RegisterTemplate {
+        message: state_string,title: title,
+        logged_in: user_req_data.logged_in
+    };
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -424,7 +430,8 @@ pub async fn register_page() -> impl Responder {
 
 
 #[get("/dashboard")]
-pub async fn dashboard_page() -> HttpResponse {
+pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
     // must do auth check here
     // Don't send entire user... only certain data.
 
@@ -440,23 +447,32 @@ pub async fn dashboard_page() -> HttpResponse {
         OffsetDateTime::now_utc(),
         true);
 
-    let dashboard_template: DashboardTemplate<'_> = DashboardTemplate { user_data: &user, title };
+    let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
+        user_data: &user,
+        title,
+        logged_in: user_req_data.logged_in
+    };
 
     HttpResponse::Ok()
         .content_type("text/html")
         .body(dashboard_template.render().unwrap())
-
 }
 
 
 #[get("/error")]
-async fn error_page() -> HttpResponse {
+async fn error_page(req: HttpRequest) -> HttpResponse {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     let message: &str = "Welcome to your error";
     let title: &str = "ERROR TITLE";
     let code: &str = "500?";
 
-    let error_template: ErrorTemplate<'_> = ErrorTemplate { message, title, code };
+    let error_template: ErrorTemplate<'_> = ErrorTemplate {
+        message,
+        title,
+        code,
+        logged_in: user_req_data.logged_in
+    };
 
     HttpResponse::Ok()
         .content_type("text/html")

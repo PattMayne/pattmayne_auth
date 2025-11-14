@@ -2,9 +2,12 @@
     <div class="top-bar-right">
         <ul class="menu">
             <li><a href="/" class="button small nav-button">HOME</a></li>
-            <li><a href="/auth/login" class="button small nav-button" id="login_nav_button">LOGIN</a></li>
-            <li><a href="/auth/register" class="button small nav-button" id="register_nav_button">REGISTER</a></li>
-            <li><a class="button small nav-button" id="logout_nav_button">LOGOUT</a></li>
+            {% if logged_in %}
+                <li><a class="button small nav-button" id="logout_nav_button">LOGOUT</a></li>
+            {% else %}
+                <li><a href="/auth/login" class="button small nav-button" id="login_nav_button">LOGIN</a></li>
+                <li><a href="/auth/register" class="button small nav-button" id="register_nav_button">REGISTER</a></li>
+            {% endif %}
         </ul> 
     </div>
 </div>
