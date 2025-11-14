@@ -1,5 +1,6 @@
 $(document).foundation()
 import * as utils from './utils.js'
+import { logout } from './globals.js'
 
 /**
  * Functions for the user registration input page.
@@ -78,6 +79,9 @@ const submit_register = async () => {
         // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
         console.log("User data: ", user)
         // do something with the user
+        if(!!user.user_id){
+            window.location.href = "/dashboard";
+        }
     }).catch(error => {
         console.log('Error: ', error)
     })

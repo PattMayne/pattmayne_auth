@@ -1,6 +1,6 @@
 use actix_web::{
     web, HttpResponse, HttpRequest,
-    Responder, http::StatusCode,
+    Responder, http::StatusCode, http::header,
     get, post, web::Redirect };
 use actix_web::cookie::{ Cookie };
 use askama::Template;
@@ -40,6 +40,17 @@ struct FreshLoginData {
     username: String,
 }
 
+
+#[derive(Serialize)]
+struct LogoutData {
+    logout: bool,
+}
+
+
+impl LogoutData {
+    pub fn new() -> Self {
+        LogoutData { logout: true } }
+}
 
 /*   STRUCTS for JSON DE-SERIALIZATION (incoming data) */
 
@@ -432,30 +443,47 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
 #[get("/dashboard")]
 pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    // must do auth check here
-    // Don't send entire user... only certain data.
+    
+    println!("dashboard page");
 
-    let title: &str = "ERROR TITLE";
-    let user: db::User = db::User::new(
-        1,
-        String::from("fake username"),
-        String::from("email@address"),
-        Some(String::from("fake first name")),
-        Some(String::from("fake last name")),
-        String::from("player"),
-        String::from("fake password hash"),
-        OffsetDateTime::now_utc(),
-        true);
+    match user_req_data.id {
+        Some(id) => {
+            let title: &str = "DASHBOARD";
+            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
+            match user_result {
+                Ok(Some(user)) =>{
+                    let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
+                        user_data: &user,
+                        title,
+                        logged_in: user_req_data.logged_in
+                    };
 
-    let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
-        user_data: &user,
-        title,
-        logged_in: user_req_data.logged_in
-    };
+                    return HttpResponse::Ok()
+                        .content_type("text/html")
+                        .body(dashboard_template.render().unwrap());
+                },
+                Ok(None) => {
+                    // redirect to LOGIN
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/auth/login"))
+                        .finish();
+                },
+                Err(e) => {
+                    // redirect to ERROR PAGE
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/error"))
+                        .finish();
+                }
+            };
+        },
+        None => {
+            // redirect to LOGIN
+            HttpResponse::Found()
+                .append_header((header::LOCATION, "/auth/login"))
+                .finish()
+        }
+    }
 
-    HttpResponse::Ok()
-        .content_type("text/html")
-        .body(dashboard_template.render().unwrap())
 }
 
 
@@ -477,4 +505,29 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("text/html")
         .body(error_template.render().unwrap())
+}
+
+
+#[post("/logout")]
+pub async fn logout_post() -> HttpResponse {
+
+    println!("kenny loggin out");
+
+    let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
+        .path("/")
+        .max_age(time::Duration::seconds(0))
+        .http_only(true)
+        .finish();
+
+    // Must also delete refresh_token from DB (currently doesn't exist anyway)
+    let refresh_cookie: Cookie<'_> = Cookie::build("refresh_token", "")
+        .path("/")
+        .max_age(time::Duration::seconds(0))
+        .http_only(true)
+        .finish();
+
+    HttpResponse::Ok()
+        .cookie(jwt_cookie)
+        .cookie(refresh_cookie)
+        .json(LogoutData::new())
 }

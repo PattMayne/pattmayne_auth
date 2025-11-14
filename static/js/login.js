@@ -1,10 +1,10 @@
 $(document).foundation()
 import * as utils from './utils.js'
 
+
 /**
- *
-    * Functions for the login input page
-* */
+ * Functions for the login input page
+ **/
 
 let err_msgs = []
 
@@ -59,9 +59,11 @@ const submit_login = async () => {
         }
         return response.json()
     }).then(user => {
-        // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
         console.log("User data: ", user)
-        // do something with the user
+        if(!!user.user_id){
+            window.location.href = "/dashboard";
+        }
+        
     }).catch(error => {
         console.log('Error: ', error)
     })
@@ -89,8 +91,10 @@ const show_err_box = () => {
 // Add event listeners
 
 document.addEventListener('DOMContentLoaded', () => hide_err_box())
-document.getElementById('username_or_email').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_login())
-document.getElementById('password').addEventListener('keydown', (e) => (e.key === 'Enter') && submit_login())
+document.getElementById('username_or_email').addEventListener(
+    'keydown', (e) => (e.key === 'Enter') && submit_login())
+document.getElementById('password').addEventListener(
+    'keydown', (e) => (e.key === 'Enter') && submit_login())
 
 
 // Make functions available to the HTML elements (via window)

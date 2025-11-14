@@ -31,6 +31,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/", web::get().to(routes::auth_home))
                     .service(routes::login_post)
                     .service(routes::register_post)
+                    .service(routes::logout_post)
             )
     })
     .bind(("127.0.0.1", 8080))?

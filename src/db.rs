@@ -65,6 +65,21 @@ impl User {
     pub fn get_role(&self) -> &String { &self.role }
     pub fn get_username(&self) -> &String { &self.username }
 
+    pub fn get_first_name(&self) -> String {
+        match self.first_name.clone() {
+            Some(first_name) => first_name.to_owned(),
+            None => String::new()
+        }
+    }
+
+        pub fn get_last_name(&self) -> String {
+        match self.last_name.clone() {
+            Some(last_name) => last_name.to_owned(),
+            None => String::new()
+        }
+    }
+
+
 }
 
 

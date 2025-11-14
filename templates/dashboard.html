@@ -27,33 +27,71 @@
 
                     <form>
                         <div class="grid-x grid-padding-x">
-                            <div class="large-4 medium-3 cell hide-for-small-only">
-                                &nbsp;
-                            </div>
-                            <div class="large-4 medium-6 small-12 cell">
+
+                            <div class="large-12 cell">
                                 <h4>{{ title }}</h4>
+                            </div>
+
+
+                            <div class="large-4 medium-6 cell hide-for-small-only">
+
                                 <label>
                                     First Name:
-                                    <input id="first_name" name="first_name" type="text" />
+                                    <input
+                                        id="first_name"
+                                        name="first_name"
+                                        type="text"
+                                        value="{{ user_data.get_first_name() }}"
+                                    />
                                 </label>
 
                                 <label>
                                     Last Name:
-                                    <input id="last_name" name="last_name" type="password" />
+                                    <input
+                                        id="last_name"
+                                        name="last_name"
+                                        type="text"
+                                        value="{{ user_data.get_last_name() }}"
+                                    />
                                 </label>
 
-                                <a class="button small" onclick="save()">SAVE</a>
+                                <a class="button small" onclick="save_names()">UPDATE NAMES</a>
+
                             </div>
-                            <div class="large-4 medium-3 cell hide-for-small-only">
+                            <div class="large-4 medium-6 small-12 cell">
+                                
+                                <label>
+                                    New Password:
+                                    <input
+                                        id="new_password"
+                                        name="new_password"
+                                        type="password"
+                                    />
+                                </label>
+
+                                <label>
+                                    Confirm New Password:
+                                    <input
+                                        id="new_password_confirm"
+                                        name="new_password_confirm"
+                                        type="password"
+                                    />
+                                </label>
+
+                                <a class="button small" onclick="save_password()">UPDATE PASSWORD</a>
+                                
+                            </div>
+                            <div class="large-4 medium-3 cell show-for-large-only">
                                 &nbsp;
                             </div>
+
                         </div>
 
                     </form>
                </div>
 
 
-                <div class="callout primary" id="err_msg_box">
+                <div class="callout primary" id="msg_box">
                 </div>
 
             </div>

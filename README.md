@@ -4,6 +4,7 @@ An authentication app I will use to serve a few web apps and games I intend to m
 I'll use JSON webtokens and a database.
 
 ### TO DO:
+ * create resources file (probably just a constants file)
  * nav in header included in template ( HOME | LOGOUT | LOGIN | REGISTER ) (send User obj to header template)
  * suspend IP address if too many failed attempts
  * create endpoints for another app to authenticate
