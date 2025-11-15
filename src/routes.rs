@@ -440,12 +440,8 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
                     
                     match update_names_result {
                         Ok(rows_affected) => {
-                            // return positive message in json
-
-                            // check if rows_affected is more than 0
-
                             return HttpResponse::Ok()
-                                .json(UpdateData::new(true))
+                                .json(UpdateData::new(rows_affected > 0))
                         },
                         Err(e) => {
                             // return negative message in json

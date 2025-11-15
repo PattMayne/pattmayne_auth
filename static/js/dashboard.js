@@ -65,8 +65,8 @@ const save_names = async () => {
             throw new Error("Inputs invalid or server errorr.")
         }
         return response.json()
-    }).then(data => {
-        if (!!data.success) {
+    }).then(update_data => {
+        if (!!update_data.success) {
             msgs.push("Names updated.")
         } else {
             msgs.push("Update failed.")
