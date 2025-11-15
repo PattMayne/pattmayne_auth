@@ -256,3 +256,28 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
 
     Ok(result.last_insert_id() as i32)
 }
+
+
+pub async fn update_real_names(
+    first_name: &String,
+    last_name: &String,
+    id: i32
+)-> Result<i32, anyhow::Error> {
+    println!("called update_names database function");
+     // map_err changes a possible error into the return type of error I return in the closure
+    // This is simpler and more idiomatic than doing a match
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
+            .bind(first_name)
+            .bind(last_name)
+            .bind(id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}

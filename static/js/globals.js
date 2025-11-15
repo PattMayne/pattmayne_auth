@@ -1,3 +1,5 @@
+
+/* Log the user out and redirect back to the home page. */
 export const logout = async () => {
 
     // send it to the login route
@@ -9,8 +11,7 @@ export const logout = async () => {
     }).then(response => {
         if(!response.ok) {
             response.json().then(data => {
-                err_msgs.push(!!data.error ? data.error : "Error")
-                show_err_box()
+                window.location.href = "/error";
             })
 
             throw new Error("Unable to logout.")
@@ -24,10 +25,12 @@ export const logout = async () => {
         
     }).catch(error => {
         console.log('Error: ', error)
+        window.location.href = "/error";
     })
 }
 
 
+// Everything we might want to run on page load, for any (or most) page(s).
 document.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('logout_nav_button')
   // Checking for the button first in case use is logged in (and button doesn't exist)

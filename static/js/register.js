@@ -37,14 +37,12 @@ const submit_register = async () => {
         console.log(err_msgs.length);
         show_err_box()
         return
-    } else {
-        hide_err_box()
-    }    
+    } else { hide_err_box() }
 
     // now send it to the register route
     const route = "/auth/register"
 
-    const response = await fetch(route, {
+    await fetch(route, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json; charset=utf-8'
@@ -85,11 +83,6 @@ const submit_register = async () => {
     }).catch(error => {
         console.log('Error: ', error)
     })
-
-    // CATCH the errors and display
-    // 
-
-    //console.log('status:', response.status)
 }
 
 // SHOW/HIDE ERROR BOX

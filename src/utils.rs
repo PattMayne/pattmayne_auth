@@ -15,6 +15,10 @@ fn password_length_range() -> StringRange {
     StringRange{ min: 6, max: 16 }
 }
 
+fn real_name_length_range() -> StringRange {
+    StringRange { min: 2, max: 50 }
+}
+
 fn string_length_valid(range_obj: &StringRange, string: &String) -> bool {
     let string_length: usize = string.len();
     string_length >= range_obj.min && string_length <= range_obj.max
@@ -41,3 +45,6 @@ pub fn validate_email(email: &String) -> bool {
     reg.is_match(&email)
 }
 
+pub fn validate_real_name(name: &String) -> bool {
+    string_length_valid(&real_name_length_range(), name)
+}

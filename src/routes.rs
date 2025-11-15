@@ -33,6 +33,13 @@ struct BadRegistrationInputs {
 }
 
 
+#[derive(Serialize)]
+struct BadNames {
+    names_valid: bool,
+    code: u16,
+}
+
+
 // Upon successful Registration or login, send back auth token (JWT token)
 #[derive(Serialize)]
 struct FreshLoginData {
@@ -47,9 +54,31 @@ struct LogoutData {
 }
 
 
+#[derive(Serialize)]
+struct UpdateData {
+    success: bool,
+}
+
+
 impl LogoutData {
     pub fn new() -> Self {
         LogoutData { logout: true } }
+}
+
+
+impl UpdateData {
+    pub fn new(success: bool) -> Self {
+        UpdateData { success } }
+}
+
+
+impl BadNames {
+    pub fn new(code: u16) -> Self {
+        BadNames {
+            code,
+            names_valid: false,
+        }
+    }
 }
 
 /*   STRUCTS for JSON DE-SERIALIZATION (incoming data) */
@@ -69,6 +98,12 @@ struct RegisterCredentials {
 struct LoginCredentials{
     username_or_email: String,
     password: String
+}
+
+#[derive(Deserialize)]
+struct RealNames {
+    pub first_name: String,
+    pub last_name: String,
 }
 
 
@@ -368,6 +403,109 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 }
 
 
+#[post("/update_names")]
+pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> HttpResponse {
+    println!("called update_names API");
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+
+    // make sure user is logged in
+    match user_req_data.id {
+        Some(id) => {
+            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
+            match user_result {
+                Ok(Some(user)) =>{
+                    // User is real user
+                    // check cookie for jwt
+                    // get json from the req, and names from json
+                    // check names for length. Send back if too long or short
+
+                    // check credentials against regex and size ranges
+                    let names_valid: bool = utils::validate_real_name(&names.first_name) &&
+                        utils::validate_real_name(&names.last_name);
+
+                    if !names_valid {
+                        // One of the fields doesn't match the regex
+                        let bad_names_data: BadNames = BadNames::new(422);
+                        return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
+                            .json(bad_names_data);
+                    }
+
+                    // Names are valid. Update the DB
+                    let update_names_result: Result<i32, anyhow::Error> =
+                        db::update_real_names(
+                            &names.first_name,
+                            &names.last_name,
+                            id
+                    ).await;
+                    
+                    match update_names_result {
+                        Ok(rows_affected) => {
+                            // return positive message in json
+
+                            // check if rows_affected is more than 0
+
+                            return HttpResponse::Ok()
+                                .json(UpdateData::new(true))
+                        },
+                        Err(e) => {
+                            // return negative message in json
+                            return HttpResponse::Found()
+                                .append_header((header::LOCATION, "/auth/login"))
+                                .finish();
+                        }
+                    }
+                },
+                Ok(None) => {
+                    // redirect to LOGIN
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/auth/login"))
+                        .finish();
+                },
+                Err(e) => {
+                    // redirect to ERROR PAGE
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/error"))
+                        .finish();
+                }
+            };
+        },
+        None => {
+            // redirect to LOGIN
+            return HttpResponse::Found()
+                .append_header((header::LOCATION, "/auth/login"))
+                .finish();
+        }
+    }
+}
+
+
+
+
+#[post("/logout")]
+pub async fn logout_post() -> HttpResponse {
+
+    println!("kenny loggin out");
+
+    let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
+        .path("/")
+        .max_age(time::Duration::seconds(0))
+        .http_only(true)
+        .finish();
+
+    // Must also delete refresh_token from DB (currently doesn't exist anyway)
+    let refresh_cookie: Cookie<'_> = Cookie::build("refresh_token", "")
+        .path("/")
+        .max_age(time::Duration::seconds(0))
+        .http_only(true)
+        .finish();
+
+    HttpResponse::Ok()
+        .cookie(jwt_cookie)
+        .cookie(refresh_cookie)
+        .json(LogoutData::new())
+}
+
+
 
 /*   GET ROUTES    */
 
@@ -444,8 +582,6 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
 pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
     
-    println!("dashboard page");
-
     match user_req_data.id {
         Some(id) => {
             let title: &str = "DASHBOARD";
@@ -508,26 +644,3 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
 }
 
 
-#[post("/logout")]
-pub async fn logout_post() -> HttpResponse {
-
-    println!("kenny loggin out");
-
-    let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
-        .path("/")
-        .max_age(time::Duration::seconds(0))
-        .http_only(true)
-        .finish();
-
-    // Must also delete refresh_token from DB (currently doesn't exist anyway)
-    let refresh_cookie: Cookie<'_> = Cookie::build("refresh_token", "")
-        .path("/")
-        .max_age(time::Duration::seconds(0))
-        .http_only(true)
-        .finish();
-
-    HttpResponse::Ok()
-        .cookie(jwt_cookie)
-        .cookie(refresh_cookie)
-        .json(LogoutData::new())
-}
