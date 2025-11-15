@@ -33,6 +33,7 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::register_post)
                     .service(routes::logout_post)
                     .service(routes::update_names)
+                    .service(routes::update_password)
             )
     })
     .bind(("127.0.0.1", 8080))?

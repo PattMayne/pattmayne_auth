@@ -8,6 +8,7 @@ use time::OffsetDateTime;
 use anyhow::{ Result, anyhow };
 use serde;
 
+
 // use pattern matching in an impl function to get a String to store to DB
 pub enum UserRole {
     Admin,
@@ -281,3 +282,27 @@ pub async fn update_real_names(
 
     Ok(result.rows_affected() as i32)
 }
+
+
+pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
+    println!("called update_password database function");
+
+    // hash password
+    let hashed_password: String = hash_password(password.to_owned());
+
+    // save password to DB and return positive result
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "UPDATE users SET password_hash = ? WHERE id = ?")
+            .bind(hashed_password)
+            .bind(id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}
+

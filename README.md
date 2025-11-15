@@ -21,3 +21,4 @@ I'll use JSON webtokens and a database.
  * Test Error page
  * Make Error page take Http code args and maybe a message
  * Remove magic strings from front-end JS. Put them in globals or resources file.
+ * Make tests, especially for error page.

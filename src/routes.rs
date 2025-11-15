@@ -12,10 +12,7 @@ use crate::db;
 use crate::utils;
 use crate::auth;
 
-
-
 /*   STRUCTS for JSON SERIALIZATION (outgoing data) */
-
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -38,6 +35,14 @@ struct BadNames {
     names_valid: bool,
     code: u16,
 }
+
+
+#[derive(Serialize)]
+struct BadPassword {
+    password_valid: bool,
+    code: u16,
+}
+
 
 
 // Upon successful Registration or login, send back auth token (JWT token)
@@ -81,6 +86,16 @@ impl BadNames {
     }
 }
 
+
+impl BadPassword {
+    pub fn new(code: u16) -> Self {
+        BadPassword {
+            code,
+            password_valid: false,
+        }
+    }
+}
+
 /*   STRUCTS for JSON DE-SERIALIZATION (incoming data) */
 
 
@@ -106,6 +121,11 @@ struct RealNames {
     pub last_name: String,
 }
 
+
+#[derive(Deserialize)]
+struct NewPassword {
+    pub password: String,
+}
 
 
 /*  ASKAMA HTML TEMPLATES   */
@@ -403,6 +423,80 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 }
 
 
+
+
+#[post("/update_password")]
+pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPassword>) -> HttpResponse {
+    println!("called update_password API");
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+
+    // make sure user is logged in
+    match user_req_data.id {
+        Some(id) => {
+            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
+            match user_result {
+                Ok(Some(user)) =>{
+                    // User is real user
+                    // get password from password_obj
+                    // check password for length. Send back if too long or short
+
+                    // check credentials against regex and size ranges
+                    let password_valid: bool = utils::validate_password(&password_obj.password);
+
+                    if !password_valid {
+                        // One of the fields doesn't match the regex
+                        let bad_password_data: BadPassword = BadPassword::new(422);
+                        return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
+                            .json(bad_password_data);
+                    }
+
+                    // Names are valid. Update the DB
+                    let update_password_result: Result<i32, anyhow::Error> =
+                        db::update_password(
+                            &password_obj.password,
+                            id
+                    ).await;
+                    
+                    match update_password_result {
+                        Ok(rows_affected) => {
+                            return HttpResponse::Ok()
+                                .json(UpdateData::new(rows_affected > 0))
+                        },
+                        Err(e) => {
+                            // return negative message in json
+                            return HttpResponse::Found()
+                                .append_header((header::LOCATION, "/auth/login"))
+                                .finish();
+                        }
+                    }
+                },
+                Ok(None) => {
+                    // redirect to LOGIN
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/auth/login"))
+                        .finish();
+                },
+                Err(e) => {
+                    // redirect to ERROR PAGE
+                    return HttpResponse::Found()
+                        .append_header((header::LOCATION, "/error"))
+                        .finish();
+                }
+            };
+        },
+        None => {
+            // redirect to LOGIN
+            return HttpResponse::Found()
+                .append_header((header::LOCATION, "/auth/login"))
+                .finish();
+        }
+    }
+}
+
+
+
+
+
 #[post("/update_names")]
 pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> HttpResponse {
     println!("called update_names API");
@@ -415,7 +509,6 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
             match user_result {
                 Ok(Some(user)) =>{
                     // User is real user
-                    // check cookie for jwt
                     // get json from the req, and names from json
                     // check names for length. Send back if too long or short
 

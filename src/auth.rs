@@ -199,6 +199,8 @@ pub fn get_jwt_secret() -> Result<String, std::env::VarError> {
  * Send in the request and we'll extract the UserReqData for you.
  * If it doesn't exist we'll assumed the user is a guest, and we will
  * make a new UserReqData for you.
+ * The middleware already checked the jwt to get the user data.
+ * This is where we retrieve the result of that check for each route.
  */
 pub fn get_user_req_data(req: &HttpRequest) -> UserReqData {
     let guest_user: UserReqData = UserReqData::new(None);

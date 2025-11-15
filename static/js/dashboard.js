@@ -5,8 +5,76 @@ import { logout } from './globals.js'
 
 let msgs = []
 
-const save_password = () => {
+const save_password = async () => {
     console.log("SAVING PASSWORD (not really but soon I'll write that part)")
+
+    msgs = []
+
+    // get the elements where the names are stored
+    const password_element = document.getElementById("new_password")
+    const confirmed_password_element = document.getElementById("new_password_confirm")
+
+    // get values from input elements
+    const password_obj = { password: password_element.value.trim() }
+    const confirmed_password = confirmed_password_element.value.trim()
+
+    // check that passwords match
+    if (!(password_obj.password === confirmed_password)) {
+        msgs.push("Passwords do not match")
+        show_msg_box()
+        return
+    } else {
+        hide_msg_box() }   
+
+    // Passwords match. Now validate the password format
+    if (!utils.check_password(password_obj.password, msgs)) {
+        console.log(msgs.length);
+        show_msg_box()
+        return
+    } else { hide_msg_box() }   
+
+    // Password is GOOD. Send it
+    const route = "/auth/update_password"
+
+
+    await fetch(route, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify(password_obj)
+    }).then(response => {
+        if (!response.ok) {
+            response.json().then(data => {
+
+                if (!!data.code) {
+                    if (data.code == 422){
+                        // If inputs were unacceptable, backend informs us, we show the message.
+                        !data.names_valid && msgs.push(utils.password_reqs_msg)
+                    } else {
+                        msgs.push("Error occurred.")
+                    }
+                } else { msgs.push("Error.") }
+
+                show_msg_box()
+            })
+
+            throw new Error("Inputs invalid or server errorr.")
+        }
+        return response.json()
+    }).then(update_data => {
+        if (!!update_data.success) {
+            msgs.push("Password updated.")
+        } else {
+            msgs.push("Update failed.")
+        }
+        show_msg_box()
+    }).catch(error => {
+        console.log('Error: ', error)
+    })
+
+
+
 }
 
 const save_names = async () => {

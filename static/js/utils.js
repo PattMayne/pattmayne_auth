@@ -60,8 +60,6 @@ export const check_real_name = (name, msgs) => {
     return name_in_range    
 }
 
-
-
 // Make sure the input string is within length range
 const string_in_range = (range_obj, string) =>
     string.length >= range_obj.min && string.length <= range_obj.max
