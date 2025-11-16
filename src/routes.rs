@@ -1,3 +1,21 @@
+/** 
+ * 
+ * 
+ * 
+ * 
+ * ====================
+ * ====================
+ * =====          =====
+ * =====  ROUTES  =====
+ * =====          =====
+ * ====================
+ * ====================
+ * 
+ * 
+ * 
+ * 
+ */
+
 use actix_web::{
     web, HttpResponse, HttpRequest,
     Responder, http::StatusCode, http::header,
@@ -20,7 +38,6 @@ struct ErrorResponse {
     code: u16,
 }
 
-
 #[derive(Serialize)]
 struct BadRegistrationInputs {
     email_valid: bool,
@@ -42,7 +59,6 @@ struct BadPassword {
     password_valid: bool,
     code: u16,
 }
-
 
 
 // Upon successful Registration or login, send back auth token (JWT token)
@@ -178,7 +194,23 @@ struct DashboardTemplate<'a> {
 
 
 
-/*  POST ROUTES  */
+/** 
+ * 
+ * 
+ * 
+ * 
+ * =========================
+ * =========================
+ * =====               =====
+ * =====  POST ROUTES  =====
+ * =====               =====
+ * =========================
+ * =========================
+ * 
+ * 
+ * 
+ * 
+ */
 
 
 /** REGISTER
@@ -193,7 +225,6 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
     let username_valid: bool = utils::validate_username(&info.username);
     let email_valid: bool = utils::validate_email(&info.email);
     let password_valid: bool = utils::validate_password(&info.password);
-
     let credentials_are_ok: bool = username_valid && email_valid && password_valid;
 
     if !credentials_are_ok {
@@ -216,7 +247,6 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
 
     let username_exists = db::username_taken(&info.username).await;
     let email_exists = db::email_taken(&info.email).await;
-
     let username_or_email_already_exists: bool = username_exists || email_exists;
 
     if username_or_email_already_exists {
@@ -243,22 +273,17 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
         Ok(user_id) => {
 
             // get user object from DB
-            let user_result: Result<Option<db::User>, anyhow::Error> =
-                db::get_user_by_id(user_id).await;
-            
-            match user_result {
+            match db::get_user_by_id(user_id).await {
                 Ok(Some(user)) => {
                     println!("Retrieved the user that we just saved");
                     // User may now receive JWT and refresh token.
                     return give_user_auth_cookies(user);
                 },
                 Ok(None) => {
-                    let lookup_failure_data: ErrorResponse = ErrorResponse {
+                    return HttpResponse::NotFound().json(ErrorResponse {
                         error: String::from("User not found."),
                         code: 404
-                    };
-
-                    return HttpResponse::NotFound().json(lookup_failure_data);
+                    });
                 },
                 Err(e) => {
                     // Worse than not finding a user. Something broke.
@@ -271,13 +296,10 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
         },
         Err(e) => {
             eprintln!("Failed to save user to DB: {:?}", e);
-
-            let err_data: ErrorResponse = ErrorResponse {
+            HttpResponse::InternalServerError().json(ErrorResponse {
                 error: e.to_string(),
                 code: 500
-            };
-
-            HttpResponse::InternalServerError().json(err_data)
+            })
         }
     }
 }
@@ -311,31 +333,24 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
     };
 
     // NOW we can do PATTERN MATCHING to return something
-
     match user_result {
         Ok(Some(user)) => {
             println!("found a user");
 
             // Now check the password
             if db::verify_password(&info.password, user.get_password_hash()) {
-                println!("password match");
-
                 // User may now receive JWT and refresh token.
                 return give_user_auth_cookies(user);
             }
 
             // Auth clearly failed
-            println!("password NOT match");
-
-            HttpResponse::Unauthorized().json(
-                ErrorResponse {
+            HttpResponse::Unauthorized().json(ErrorResponse {
                 error: String::from("Invalid Credentials"),
                 code: 401
             })
         },
         Ok(None) => {
-            HttpResponse::NotFound().json(
-                ErrorResponse {
+            HttpResponse::NotFound().json(ErrorResponse {
                 error: String::from("User not found."),
                 code: 404
             })
@@ -358,13 +373,11 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
  * along with some user info in a JSON.
  */
 fn give_user_auth_cookies(user: db::User) -> HttpResponse {
-
     // generate JWT. Don't send user obj (with password) back
-    let jwt_secret_result: Result<String, std::env::VarError> = auth::get_jwt_secret();
-    let jwt_err_string: &str = "JSON Web Token Error: ";
+    let jwt_err_string: String = String::from("Error generating access token.");
 
     // Checking that the secret exists
-    match jwt_secret_result {
+    match auth::get_jwt_secret() {
         Ok(jwt_secret) => {
 
             // Secret exists. Now let's generate the actual token
@@ -391,20 +404,19 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
                     return HttpResponse::Ok()
                         .cookie(jwt_cookie)
                         .cookie(refresh_token_cookie)
-                        .json(
-                            FreshLoginData {
-                                user_id: user.get_id(),
-                                username: user.get_username().to_owned()
+                        .json(FreshLoginData {
+                            user_id: user.get_id(),
+                            username: user.get_username().to_owned()
                     });
                 },
 
                 // No token. Show error
-                Err(e) => {
+                Err(_e) => {
                     // Returning error data in a json
                     return HttpResponse::InternalServerError().json(
                         ErrorResponse {
-                            error: format!("{}{}", jwt_err_string, e),
-                            code: 404
+                            error: jwt_err_string,
+                            code: 500
                     });
                 }
             }          
@@ -415,27 +427,22 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             // Returning error data in a json
             return HttpResponse::InternalServerError().json(
                 ErrorResponse {
-                    error: format!("{}{}", jwt_err_string, e),
-                    code: 404
+                    error: jwt_err_string,
+                    code: 500
             });
         },
     }
 }
 
 
-
-
 #[post("/update_password")]
 pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPassword>) -> HttpResponse {
-    println!("called update_password API");
-    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // make sure user is logged in
-    match user_req_data.id {
+    match auth::get_user_req_data(&req).id {
         Some(id) => {
-            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
-            match user_result {
-                Ok(Some(user)) =>{
+            match db::get_user_by_id(id).await {
+                Ok(Some(_user)) =>{
                     // User is real user
                     // get password from password_obj
                     // check password for length. Send back if too long or short
@@ -452,62 +459,38 @@ pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPasswo
 
                     // Names are valid. Update the DB
                     let update_password_result: Result<i32, anyhow::Error> =
-                        db::update_password(
-                            &password_obj.password,
-                            id
-                    ).await;
+                        db::update_password(&password_obj.password, id).await;
                     
                     match update_password_result {
                         Ok(rows_affected) => {
                             return HttpResponse::Ok()
                                 .json(UpdateData::new(rows_affected > 0))
                         },
-                        Err(e) => {
-                            // return negative message in json
-                            return HttpResponse::Found()
-                                .append_header((header::LOCATION, "/auth/login"))
-                                .finish();
+                        Err(_e) => {
+                            return return_internal_err_json();
                         }
                     }
                 },
-                Ok(None) => {
-                    // redirect to LOGIN
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/auth/login"))
-                        .finish();
-                },
-                Err(e) => {
-                    // redirect to ERROR PAGE
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/error"))
-                        .finish();
+                Ok(None) => { return return_authentication_err_json(); },
+                Err(_e) => {
+                    return return_internal_err_json();
                 }
             };
         },
-        None => {
-            // redirect to LOGIN
-            return HttpResponse::Found()
-                .append_header((header::LOCATION, "/auth/login"))
-                .finish();
-        }
+        None => return return_authentication_err_json()
     }
 }
 
 
-
-
-
 #[post("/update_names")]
 pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> HttpResponse {
-    println!("called update_names API");
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // make sure user is logged in
     match user_req_data.id {
         Some(id) => {
-            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
-            match user_result {
-                Ok(Some(user)) =>{
+            match db::get_user_by_id(id).await {
+                Ok(Some(_user)) =>{
                     // User is real user
                     // get json from the req, and names from json
                     // check names for length. Send back if too long or short
@@ -534,40 +517,22 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
                     match update_names_result {
                         Ok(rows_affected) => {
                             return HttpResponse::Ok()
-                                .json(UpdateData::new(rows_affected > 0))
+                                .json(UpdateData::new(rows_affected > 0));
                         },
-                        Err(e) => {
-                            // return negative message in json
-                            return HttpResponse::Found()
-                                .append_header((header::LOCATION, "/auth/login"))
-                                .finish();
+                        Err(_e) => {
+                            return return_internal_err_json();
                         }
                     }
                 },
-                Ok(None) => {
-                    // redirect to LOGIN
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/auth/login"))
-                        .finish();
-                },
-                Err(e) => {
-                    // redirect to ERROR PAGE
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/error"))
-                        .finish();
+                Ok(None) => { return return_authentication_err_json(); },
+                Err(_e) => {
+                    return return_authentication_err_json();
                 }
             };
         },
-        None => {
-            // redirect to LOGIN
-            return HttpResponse::Found()
-                .append_header((header::LOCATION, "/auth/login"))
-                .finish();
-        }
+        None => return_authentication_err_json()
     }
 }
-
-
 
 
 #[post("/logout")]
@@ -596,7 +561,25 @@ pub async fn logout_post() -> HttpResponse {
 
 
 
-/*   GET ROUTES    */
+
+/** 
+ * 
+ * 
+ * 
+ * 
+ * ========================
+ * ========================
+ * =====              =====
+ * =====  GET ROUTES  =====
+ * =====              =====
+ * ========================
+ * ========================
+ * 
+ * 
+ * 
+ * 
+ */
+
 
 
 
@@ -674,8 +657,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
     match user_req_data.id {
         Some(id) => {
             let title: &str = "DASHBOARD";
-            let user_result: Result<Option<db::User>, anyhow::Error> = db::get_user_by_id(id).await;
-            match user_result {
+            match db::get_user_by_id(id).await {
                 Ok(Some(user)) =>{
                     let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
                         user_data: &user,
@@ -688,10 +670,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                         .body(dashboard_template.render().unwrap());
                 },
                 Ok(None) => {
-                    // redirect to LOGIN
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/auth/login"))
-                        .finish();
+                    return send_to_login();
                 },
                 Err(e) => {
                     // redirect to ERROR PAGE
@@ -701,12 +680,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                 }
             };
         },
-        None => {
-            // redirect to LOGIN
-            HttpResponse::Found()
-                .append_header((header::LOCATION, "/auth/login"))
-                .finish()
-        }
+        None => send_to_login()
     }
 
 }
@@ -733,3 +707,51 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
 }
 
 
+/** 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  HELPER FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * 
+ * 
+ * 
+ */
+
+
+/**
+ * Rather than rewrite this over and over, for situations where a guest tries to access
+ * restricted pages, this function returns the login route in an HttpResponse.
+ */
+fn send_to_login() -> HttpResponse {
+    HttpResponse::Found()
+        .append_header((header::LOCATION, "/auth/login"))
+        .finish()
+}
+
+/**
+ * Sometimes we don't know what went wrong and we need to return a JSON
+ * object which says so.
+ */
+fn return_internal_err_json() -> HttpResponse {
+    HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+        .json(ErrorResponse{
+            error: String::from("Internal server error"),
+            code: 500
+        })
+}
+
+// If authentication failed and user must log back in
+fn return_authentication_err_json() -> HttpResponse {
+    HttpResponse::Unauthorized().json(ErrorResponse{
+        error: String::from("Authentication required"),
+        code: 401
+    })
+}

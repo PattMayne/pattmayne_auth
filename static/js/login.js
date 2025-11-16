@@ -42,31 +42,28 @@ const submit_login = async () => {
     // now send it to the login route
     const route = "/auth/login"
 
-    await fetch(route, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        },
-        body: JSON.stringify(creds)
-    }).then(response => {
-        if(!response.ok) {
-            response.json().then(data => {
-                err_msgs.push(!!data.error ? data.error : "Error")
-                show_err_box()
-            })
+    await utils.fetch_json_post(route, creds)
+        .then(response => {
+            if(!response.ok) {
+                response.json().then(data => {
+                    let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                    msg += (!!data.error) ? data.error : " Error occurred"
+                    err_msgs.push(msg)
+                    show_err_box()
+                })
 
-            throw new Error("User not found or server error.")
-        }
-        return response.json()
-    }).then(user => {
-        console.log("User data: ", user)
-        if(!!user.user_id){
-            window.location.href = "/dashboard";
-        }
-        
-    }).catch(error => {
-        console.log('Error: ', error)
-    })
+                throw new Error("User not found or server error.")
+            }
+            return response.json()
+        }).then(user => {
+            console.log("User data: ", user)
+            if(!!user.user_id){
+                window.location.href = "/dashboard";
+            }
+            
+        }).catch(error => {
+            console.log('Error: ', error)
+        })
 }
 
 

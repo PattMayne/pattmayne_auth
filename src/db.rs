@@ -172,6 +172,7 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
 
 
 // Pre-check for duplicates
+// TO DO: errors cannot return false. We haven't confirmed the values are unique.
 
 // check if username already exists in DB
 pub async fn username_taken(username: &String) -> bool {
@@ -228,9 +229,7 @@ pub async fn email_taken(email: &String) -> bool {
 
 
 // Add new user to database
-
 pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
-
     // map_err changes a possible error into the return type of error I return in the closure
     // This is simpler and more idiomatic than doing a match
     let pool: MySqlPool = create_pool().await.map_err(|e| {
@@ -284,10 +283,12 @@ pub async fn update_real_names(
 }
 
 
+/**
+ * User is updating password.
+ * Route has already confirmed that it's an acceptable password.
+ * Hash it and save it to the database.
+ */
 pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
-    println!("called update_password database function");
-
-    // hash password
     let hashed_password: String = hash_password(password.to_owned());
 
     // save password to DB and return positive result

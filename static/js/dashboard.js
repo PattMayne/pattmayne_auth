@@ -1,13 +1,19 @@
 $(document).foundation()
 import * as utils from './utils.js'
-import { logout } from './globals.js'
+import * as globals from './globals.js'
 
 
 let msgs = []
 
+/**
+ * Save the user's new password to the database.
+ * Checks that user "confirmed" the password (by typing it twice),
+ * and that it meets regex requirements,
+ * and either prints error messages or sends the password to the backend.
+ * If the backend fails or rejects it for any reason,
+ * display those errors.
+ */
 const save_password = async () => {
-    console.log("SAVING PASSWORD (not really but soon I'll write that part)")
-
     msgs = []
 
     // get the elements where the names are stored
@@ -36,50 +42,50 @@ const save_password = async () => {
     // Password is GOOD. Send it
     const route = "/auth/update_password"
 
+    await utils.fetch_json_post(route,password_obj)
+        .then(response => {
+            if (!response.ok) {
+                response.json().then(data => {
 
-    await fetch(route, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        },
-        body: JSON.stringify(password_obj)
-    }).then(response => {
-        if (!response.ok) {
-            response.json().then(data => {
+                    if (!!data.code) {
+                        if (data.code == 422){
+                            // If inputs were unacceptable, backend informs us, we show the message.
+                            !data.names_valid && msgs.push(utils.password_reqs_msg)
+                        } else if (data.code == 401){
+                            // User is not authenticated
+                            globals.logout()
+                        } else {
+                            let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                            msg += (!!data.error) ? data.error : " Error occurred"
+                            msgs.push(msg)
+                        }
+                    } else { msgs.push("Error.") }
+                    show_msg_box()
+                })
 
-                if (!!data.code) {
-                    if (data.code == 422){
-                        // If inputs were unacceptable, backend informs us, we show the message.
-                        !data.names_valid && msgs.push(utils.password_reqs_msg)
-                    } else {
-                        msgs.push("Error occurred.")
-                    }
-                } else { msgs.push("Error.") }
-
-                show_msg_box()
-            })
-
-            throw new Error("Inputs invalid or server errorr.")
-        }
-        return response.json()
-    }).then(update_data => {
-        if (!!update_data.success) {
-            msgs.push("Password updated.")
-        } else {
-            msgs.push("Update failed.")
-        }
-        show_msg_box()
-    }).catch(error => {
-        console.log('Error: ', error)
-    })
-
-
-
+                throw new Error("Inputs invalid or server error.")
+            }
+            return response.json()
+        }).then(update_data => {
+            if (!!update_data.success) {
+                msgs.push("Password updated.")
+            } else {
+                msgs.push("Update failed.")
+            }
+            show_msg_box()
+        }).catch(error => {
+            console.log('Error: ', error)
+        })
 }
 
+/**
+ * Save the user's first and last name to the database.
+ * Gets the name inputs from the fields, validates the values,
+ * and either prints error messages or sends the names to the backend.
+ * If the backend fails or rejects them for any reason,
+ * display those errors.
+ */
 const save_names = async () => {
-    console.log("SAVING NAMES (not really but soon I'll write that part)")
-
     msgs = []
 
     // get the elements where the names are stored
@@ -107,43 +113,41 @@ const save_names = async () => {
     // checks passed. send names to update_names route
     const route = "/auth/update_names"
 
+    await utils.fetch_json_post(route, names)
+        .then(response => {
+            if (!response.ok) {
+                response.json().then(data => {
 
-    await fetch(route, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        },
-        body: JSON.stringify(names)
-    }).then(response => {
-        if (!response.ok) {
-            response.json().then(data => {
+                    if (!!data.code) {
+                        if (data.code == 422){
+                            // If inputs were unacceptable, backend informs us, we show the message.
+                            !data.names_valid && msgs.push(utils.username_reqs_msg)
+                        } else if (data.code == 401){
+                            // User is not authenticated
+                            globals.logout()
+                        } else {
+                            let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                            msg += (!!data.error) ? data.error : " Error occurred"
+                            msgs.push(msg)
+                        }
+                    } else { msgs.push("Error.") }
 
-                if (!!data.code) {
-                    if (data.code == 422){
-                        // If inputs were unacceptable, backend informs us, we show the message.
-                        !data.names_valid && msgs.push(utils.username_reqs_msg)
-                    } else {
-                        msgs.push("Error occurred.")
-                    }
-                } else { msgs.push("Error.") }
+                    show_msg_box()
+                })
 
-                show_msg_box()
-            })
-
-            throw new Error("Inputs invalid or server errorr.")
-        }
-        return response.json()
-    }).then(update_data => {
-        if (!!update_data.success) {
-            msgs.push("Names updated.")
-        } else {
-            msgs.push("Update failed.")
-        }
-        show_msg_box()
-    }).catch(error => {
-        console.log('Error: ', error)
-    })
-
+                throw new Error("Inputs invalid or server error.")
+            }
+            return response.json()
+        }).then(update_data => {
+            if (!!update_data.success) {
+                msgs.push("Names updated.")
+            } else {
+                msgs.push("Update failed.")
+            }
+            show_msg_box()
+        }).catch(error => {
+            console.log('Error: ', error)
+        })
 }
 
 // SHOW/HIDE ERROR BOX

@@ -42,47 +42,46 @@ const submit_register = async () => {
     // now send it to the register route
     const route = "/auth/register"
 
-    await fetch(route, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        },
-        body: JSON.stringify(creds)
-    }).then(response => {
-        if (!response.ok) {
-            response.json().then(data => {
+    await utils.fetch_json_post(route, creds)
+        .then(response => {
+            if (!response.ok) {
+                response.json().then(data => {
 
-                if (!!data.code) {
-                    if (data.code == 422){
-                        // If inputs were unacceptable, backend informs us, we show the message.
-                        !data.username_valid && err_msgs.push(utils.username_reqs_msg)
-                        !data.email_valid && err_msgs.push(utils.email_reqs_msg)
-                        !data.password_valid && err_msgs.push(utils.password_reqs_msg)
-                    } else if (data.code == 409){
-                        // If inputs were duplicates, backend informs us, we show the message.
-                        !data.username_valid && err_msgs.push("Username already taken.")
-                        !data.email_valid && err_msgs.push("Email already taken.")
+                    if (!!data.code) {
+                        if (data.code == 422){
+                            // If inputs were unacceptable, backend informs us, we show the message.
+                            !data.username_valid && err_msgs.push(utils.username_reqs_msg)
+                            !data.email_valid && err_msgs.push(utils.email_reqs_msg)
+                            !data.password_valid && err_msgs.push(utils.password_reqs_msg)
+                        } else if (data.code == 409){
+                            // If inputs were duplicates, backend informs us, we show the message.
+                            !data.username_valid && err_msgs.push("Username already taken.")
+                            !data.email_valid && err_msgs.push("Email already taken.")
+                        } else {
+                            let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                            msg += (!!data.error) ? data.error : " Error occurred"
+                            err_msgs.push(msg)
+                        }
+                    } else {
+                        err_msgs.push("Error.")
                     }
-                } else {
-                    err_msgs.push("Error.")
-                }
 
-                show_err_box()
-            })
+                    show_err_box()
+                })
 
-            throw new Error("Inputs invalid or server error.")
-        }
-        return response.json()
-    }).then(user => {
-        // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
-        console.log("User data: ", user)
-        // do something with the user
-        if(!!user.user_id){
-            window.location.href = "/dashboard";
-        }
-    }).catch(error => {
-        console.log('Error: ', error)
-    })
+                throw new Error("Inputs invalid or server error.")
+            }
+            return response.json()
+        }).then(user => {
+            // THIS WILL BE AUTH DATA NOT USER (change "user" to "auth_data")
+            console.log("User data: ", user)
+            // do something with the user
+            if(!!user.user_id){
+                window.location.href = "/dashboard";
+            }
+        }).catch(error => {
+            console.log('Error: ', error)
+        })
 }
 
 // SHOW/HIDE ERROR BOX
