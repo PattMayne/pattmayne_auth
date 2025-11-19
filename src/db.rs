@@ -207,24 +207,35 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
 
     let expires_timestamp: OffsetDateTime =
         OffsetDateTime::now_utc() + Duration::days(14);
+    let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
 
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "INSERT INTO refresh_tokens (
             user_id,
             client_id,
             token,
+            created_timestamp,
             expires_timestamp)
-        VALUES (?, ?, ?, ?)")
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            token = VALUES(token),
+            created_timestamp = VALUES(created_timestamp),
+            expires_timestamp = VALUES(expires_timestamp);
+            ")
     .bind(user_id)
     .bind(client_id)
     .bind(&refresh_token)
+    .bind(created_timestamp)
     .bind(expires_timestamp)
     .execute(&pool).await.map_err(|e| {
-        eprintln!("Failed to save user to database: {:?}", e);
-        anyhow!("Could not save user to database: {e}")
+        eprintln!("Failed to save refresh_token to database: {:?}", e);
+        anyhow!("Could not save refresh_token to database: {e}")
     })?;
 
-    Ok(result.last_insert_id() as i32)
+    let rows_affected = result.rows_affected();
+    println!("Rows affected: {}", rows_affected);
+
+    Ok(result.rows_affected() as i32)
  }
 
 
