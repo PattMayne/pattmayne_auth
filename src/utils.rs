@@ -48,3 +48,6 @@ pub fn validate_email(email: &String) -> bool {
 pub fn validate_real_name(name: &String) -> bool {
     string_length_valid(&real_name_length_range(), name)
 }
+
+// TO DO: Move this into RESOURCES file
+pub fn auth_client_id() -> String { String::from("auth_site") }

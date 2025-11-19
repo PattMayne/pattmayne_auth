@@ -4,10 +4,12 @@ use sqlx::{MySqlPool, any };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use password_hash::{SaltString, PasswordHash};
-use time::OffsetDateTime;
+use time::{ OffsetDateTime, Duration };
 use anyhow::{ Result, anyhow };
 use serde;
 
+use crate::auth;
+use crate::utils;
 
 /* 
  * 
@@ -188,6 +190,43 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
  * 
  */
 
+ /**
+  * 
+  */
+ pub async fn add_refresh_token(
+    user_id: i32,
+    client_id: String,
+    refresh_token: &String
+) -> Result<i32, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    println!("trying to add the refresh token");
+
+    let expires_timestamp: OffsetDateTime =
+        OffsetDateTime::now_utc() + Duration::days(14);
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "INSERT INTO refresh_tokens (
+            user_id,
+            client_id,
+            token,
+            expires_timestamp)
+        VALUES (?, ?, ?, ?)")
+    .bind(user_id)
+    .bind(client_id)
+    .bind(&refresh_token)
+    .bind(expires_timestamp)
+    .execute(&pool).await.map_err(|e| {
+        eprintln!("Failed to save user to database: {:?}", e);
+        anyhow!("Could not save user to database: {e}")
+    })?;
+
+    Ok(result.last_insert_id() as i32)
+ }
+
 
 // Add new user to database
 pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
@@ -198,22 +237,20 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
         anyhow!("Could not create pool: {e}")
     })?;
 
-    // hash the password
     let password_hash: String = hash_password(password);
-
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-            "INSERT INTO users (
-                username,
-                email,
-                password_hash)
-            VALUES (?, ?, ?)")
-        .bind(username)
-        .bind(email)
-        .bind(&password_hash)
-        .execute(&pool).await.map_err(|e| {
-            eprintln!("Failed to save user to database: {:?}", e);
-            anyhow!("Could not save user to database: {e}")
-        })?;
+        "INSERT INTO users (
+            username,
+            email,
+            password_hash)
+        VALUES (?, ?, ?)")
+    .bind(username)
+    .bind(email)
+    .bind(&password_hash)
+    .execute(&pool).await.map_err(|e| {
+        eprintln!("Failed to save user to database: {:?}", e);
+        anyhow!("Could not save user to database: {e}")
+    })?;
 
     Ok(result.last_insert_id() as i32)
 }
@@ -310,7 +347,7 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
 
     // Auth site does NOT already exist (if we reached this far in the function)
     // Create auth site
-    let client_id: &str = "CLIENT_ID_PLACEHOLDER";
+    let client_id: String = utils::auth_client_id();
     let client_secret: &str = "CLIENT_SECRET_PLACEHOLDER";
     let name: &str = "Auth Site";
     let redirect_uri: &str = "127.0.0.1:8080/dashboard";
@@ -331,7 +368,7 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
         .bind(client_id)
         .bind(client_secret)
         .bind(name)
-        .bind(&domain)
+        .bind(domain)
         .bind(redirect_uri)
         .bind(client_type)
         .bind(is_internal)

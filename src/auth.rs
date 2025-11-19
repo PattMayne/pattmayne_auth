@@ -219,6 +219,10 @@ pub fn generate_jwt(
 }
 
 
+/**
+ * Make a totally random refresh token to save to DB and secure cookie.
+ * This token authorizes the generation of fresh JWTs.
+ */
 pub fn generate_refresh_token() -> String {
     rand::rng()
         .sample_iter(&Alphanumeric)
@@ -233,7 +237,6 @@ pub fn generate_refresh_token() -> String {
  * For external app authentication we will implement OAuth2
  */
 pub fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
-
     // WARNING: THIS MUST BE TRUE IN PROD. Change env variable
     let secure: bool = std::env::var("COOKIE_SECURE")
         .map(|value: String| value == "true")

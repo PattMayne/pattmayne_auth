@@ -323,7 +323,7 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
                 Ok(Some(user)) => {
                     println!("Retrieved the user that we just saved");
                     // User may now receive JWT and refresh token.
-                    return give_user_auth_cookies(user);
+                    return give_user_auth_cookies(user).await;
                 },
                 Ok(None) => {
                     return HttpResponse::NotFound().json(ErrorResponse {
@@ -386,7 +386,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             // Now check the password
             if db::verify_password(&info.password, user.get_password_hash()) {
                 // User may now receive JWT and refresh token.
-                return give_user_auth_cookies(user);
+                return give_user_auth_cookies(user).await;
             }
 
             // Auth clearly failed
@@ -418,9 +418,13 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
  * puts them in cookies and sends the response,
  * along with some user info in a JSON.
  */
-fn give_user_auth_cookies(user: db::User) -> HttpResponse {
+async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
     // generate JWT. Don't send user obj (with password) back
-    let jwt_err_string: String = String::from("Error generating access token.");
+    let jwt_err_500 = HttpResponse::InternalServerError().json(
+        ErrorResponse {
+            error: String::from("Error generating access token."),
+            code: 500
+    });
 
     // Checking that the secret exists
     match auth::get_jwt_secret() {
@@ -437,46 +441,52 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             // Make sure we really got a token
             match jwt_result {
                 Ok(jwt) => {
-                    // TOTAL SUCCESS: Returning auth data in a json
-                    //let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
+                    // SUCCESS: Returning auth data in a json
+
+                    // create a refresh_token and put it in the DB
                     let refresh_token: String = auth::generate_refresh_token();
+                    match db::add_refresh_token(
+                        user.get_id(),
+                        utils::auth_client_id(),
+                        &refresh_token
+                    ).await {
+                        Ok(_token_index) =>{
+                            // Refresh token successfully inserted into DB
+                            // Now make the cookies and set them in the req
+                            let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
+                                jwt,
+                                String::from("jwt"));
+                            let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
+                                refresh_token,
+                                String::from("refresh_token"));
 
-                    let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
-                        jwt,
-                        String::from("jwt"));
-                    let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
-                        refresh_token,
-                        String::from("refresh_token"));
-
-                    return HttpResponse::Ok()
-                        .cookie(jwt_cookie)
-                        .cookie(refresh_token_cookie)
-                        .json(FreshLoginData {
-                            user_id: user.get_id(),
-                            username: user.get_username().to_owned()
-                    });
+                            return HttpResponse::Ok()
+                                .cookie(jwt_cookie)
+                                .cookie(refresh_token_cookie)
+                                .json(FreshLoginData {
+                                    user_id: user.get_id(),
+                                    username: user.get_username().to_owned()
+                            });
+                        },
+                        Err(e) => {
+                            eprint!("Internal Server Error: {e}");
+                            jwt_err_500
+                        }
+                    }
                 },
 
                 // No token. Show error
-                Err(_e) => {
-                    // Returning error data in a json
-                    return HttpResponse::InternalServerError().json(
-                        ErrorResponse {
-                            error: jwt_err_string,
-                            code: 500
-                    });
+                Err(e) => {
+                    eprint!("Internal Server Error: {e}");
+                    jwt_err_500
                 }
             }          
         },
 
         // No JWT secret. Show error
         Err(e) => {
-            // Returning error data in a json
-            return HttpResponse::InternalServerError().json(
-                ErrorResponse {
-                    error: jwt_err_string,
-                    code: 500
-            });
+            eprint!("Internal Server Error: {e}");
+            jwt_err_500
         },
     }
 }

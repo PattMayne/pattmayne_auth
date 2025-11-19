@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    client_id INT NOT NULL,
+    client_id VARCHAR(100) NOT NULL, -- NOT the table/row index, but the string client_id
     token VARCHAR(255) NOT NULL UNIQUE,
     created_timestamp TIMESTAMP DEFAULT UTC_TIMESTAMP,
     expires_timestamp TIMESTAMP NOT NULL
