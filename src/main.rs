@@ -27,6 +27,7 @@ async fn main() -> std::io::Result<()> {
     // dotenvy loads env variables for whole app
     // after this, just call std::env::var(variable_name)
     dotenvy::dotenv().ok();
+    db_first_entries().await;
 
     HttpServer::new(|| {
         App::new()
@@ -50,4 +51,39 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
+}
+
+
+/**
+ * When the server first starts, make sure admin exists in users.
+ * Also make sure auth site (this site) exists in client_sites.
+ */
+async fn db_first_entries() {
+    // add the admin user if they don't exist
+    match db::create_primary_admin().await {
+        Ok(user_created) => {
+            if user_created {
+                println!("New admin created.");
+            } else {
+                println!("Admin already exists.")
+            }            
+        },
+        Err(e) => {
+            println!("DB Error: {e}");
+        }
+    };
+
+    // add this site to the client_sites table if it doesn't exist
+    match db::create_self_client().await {
+        Ok(user_created) => {
+            if user_created {
+                println!("New client_site (auth) created.");
+            } else {
+                println!("Auth site already exists.")
+            }            
+        },
+        Err(e) => {
+            println!("DB Error: {e}");
+        }
+    };
 }

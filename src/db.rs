@@ -1,6 +1,6 @@
 // I'm actually using MariaDB which is supposedly a drop-in replacement for MySQL
 
-use sqlx::{MySqlPool };
+use sqlx::{MySqlPool, any };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use password_hash::{SaltString, PasswordHash};
@@ -219,6 +219,131 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
 }
 
 
+/**
+ * When the server starts up we make sure there is an admin.
+ */
+pub async fn create_primary_admin() -> Result<bool, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    // If admin already exists, print their name and return false.
+
+    let count_option: Option<Count> = match sqlx::query_as!(
+        Count,
+        "SELECT COUNT(*) as count FROM users WHERE role = ?",
+        "admin"
+    ).fetch_optional(&pool).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Failed to fetch admin user count from DB: {:?}", e);
+            return Err(anyhow!("Could not fetch admin count: {e}"));
+        }
+    };
+
+    let count: i64 = count_option.unwrap_or(Count{count: 0}).count;
+    if count > 0 {
+        println!("Admin already exists.");
+        return Ok(false);
+    }
+
+    // Admin does NOT exist (if we reached this point in the function)
+    // Time to create the admin
+    let default_pw: String = std::env::var("ADMIN_PW")?;
+
+    let username: &str = "pattmayne";
+    let email: &str = "pattmayne@gmail.com";
+    let role: &str = "admin";
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+            "INSERT INTO users (
+                username,
+                email,
+                role,
+                password_hash)
+            VALUES (?, ?, ?, ?)")
+        .bind(username)
+        .bind(email)
+        .bind(role)
+        .bind(&default_pw)
+        .execute(&pool).await.map_err(|e| {
+            eprintln!("Failed to save FIRST ADMIN user to database: {:?}", e);
+            anyhow!("Could not save FIRST ADMIN user to database: {e}")
+        })?;
+
+    let new_rows_count: u64 = result.rows_affected();
+    Ok(new_rows_count > 0)
+}
+
+
+/**
+ * When the server starts up we make sure the auth site (this site)
+ * exists as a client_site in the DB.
+ */
+pub async fn create_self_client() -> Result<bool, anyhow::Error> {
+    let domain: String = std::env::var("AUTH_DOMAIN")?;
+
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    // If site already exists, print their name and return false.
+
+    let count_option: Option<Count> = match sqlx::query_as!(
+        Count,
+        "SELECT COUNT(*) as count FROM client_sites WHERE domain = ?",
+        &domain
+    ).fetch_optional(&pool).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Failed to fetch client_sites count from DB: {:?}", e);
+            return Err(anyhow!("Could not fetch auth client_sites count: {e}"));
+        }
+    };
+
+    let count: i64 = count_option.unwrap_or(Count{count: 0}).count;
+    if count > 0 {
+        println!("Auth client_site already exists.");
+        return Ok(false);
+    }
+
+    // Auth site does NOT already exist (if we reached this far in the function)
+    // Create auth site
+    let client_id: &str = "CLIENT_ID_PLACEHOLDER";
+    let client_secret: &str = "CLIENT_SECRET_PLACEHOLDER";
+    let name: &str = "Auth Site";
+    let redirect_uri: &str = "127.0.0.1:8080/dashboard";
+    let client_type: &str = "confidential";
+    let is_internal: bool = true;
+
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+            "INSERT INTO client_sites (
+                client_id,
+                client_secret,
+                name,
+                domain,
+                redirect_uri,
+                type,
+                is_internal)
+            VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .bind(client_id)
+        .bind(client_secret)
+        .bind(name)
+        .bind(&domain)
+        .bind(redirect_uri)
+        .bind(client_type)
+        .bind(is_internal)
+        .execute(&pool).await.map_err(|e| {
+            eprintln!("Failed to save FIRST ADMIN user to database: {:?}", e);
+            anyhow!("Could not save FIRST ADMIN user to database: {e}")
+        })?;
+
+    let new_rows_count: u64 = result.rows_affected();
+    Ok(new_rows_count > 0)
+}
+
 
 /* 
  * 
@@ -405,12 +530,20 @@ pub fn hash_password(input_password: String) -> String {
  * @return bool (matches or does not match)
  */
 pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
-    let parsed_stored_hash: PasswordHash<'_> = PasswordHash::new(&stored_hash).unwrap();
-    let argon2: Argon2<'_> = Argon2::default();
 
-    // returns a bool
-    argon2.verify_password(
-        input_password.as_bytes(),
-        &parsed_stored_hash
-    ).is_ok()
+    match PasswordHash::new(&stored_hash) {
+        Ok(parsed_stored_hash) => {
+            let argon2: Argon2<'_> = Argon2::default();
+
+            // returns a bool
+            argon2.verify_password(
+                input_password.as_bytes(),
+                &parsed_stored_hash
+            ).is_ok()
+        },
+        Err(e) => {
+            eprintln!("Password hash error: {:?}", e);
+            false
+        }
+    }
 }
