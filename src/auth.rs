@@ -4,9 +4,24 @@ use jsonwebtoken::{
 use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
 use actix_web::{ HttpRequest, HttpMessage, cookie::{Cookie, SameSite}};
+use rand::{distr::Alphanumeric, Rng};
 
 
 /*
+ * 
+ * 
+ * ============================
+ * ============================
+ * =====                  =====
+ * =====  AUTH FUNCTIONS  =====
+ * =====                  =====
+ * ============================
+ * ============================
+ * 
+ * 
+ * 
+ * 
+ * 
  * TOKEN USAGE AND STORAGE
  *
  * ACCESS TOKENS: JWTs (JSON Web Tokens)
@@ -48,6 +63,23 @@ use actix_web::{ HttpRequest, HttpMessage, cookie::{Cookie, SameSite}};
  * -- -- Therefore we need to research and implement this other protocol
  */
 
+ /* 
+ * 
+ * 
+ * 
+ * 
+ * ===============================
+ * ===============================
+ * ==========           ==========
+ * ==========  STRUCTS  ==========
+ * ==========           ==========
+ * ===============================
+ * ===============================
+ * and their implemented functions
+ * 
+ * 
+ * 
+ */
 
 /* 
  * This holds that data that gets encoded into a JSON Web Token (JWT).
@@ -76,7 +108,8 @@ pub struct UserReqData {
 }
 
 /**
- * UserReqData is built from a Claims object.
+ * User Data for middleware to put into the Request, for the route functions to use.
+ * UserReqData is built from a Claims object (taken from the JWT).
  * If we have a claims struct, the user must be logged in, so send it in as Some<claims>.
  * Otherwise, send in None and we will make a generic Guest object.
  */
@@ -116,6 +149,49 @@ impl Claims {
     pub fn get_exp(&self) -> usize { self.exp }
 }
 
+
+
+/**
+ * Send in the request and we'll extract the UserReqData for you.
+ * If it doesn't exist we'll assumed the user is a guest, and we will
+ * make a new UserReqData for you.
+ * The middleware already checked the jwt to get the user data.
+ * This is where we retrieve the result of that check for each route.
+ */
+pub fn get_user_req_data(req: &HttpRequest) -> UserReqData {
+    let guest_user: UserReqData = UserReqData::new(None);
+    let extensions: std::cell::Ref<'_, actix_web::dev::Extensions> = req.extensions();
+
+    // Get user data from req
+    match extensions.get::<UserReqData>() {
+        Some(user_data) => user_data,
+        None => &guest_user
+    }.to_owned()
+}
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * xxxxxxxxxx          xxxxxxxxxx
+ * xxxxxxxxxx  TOKENS  xxxxxxxxxx
+ * xxxxxxxxxx          xxxxxxxxxx
+ * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * 
+ * JSON Web Tokens
+ * Refresh Tokens
+ * Build them, put them in cookies, verify them, etc.
+ * 
+ * 
+ * 
+ * 
+ */
+
 /**
  * JSON Web Token generator.
  * Take some info about the user to create a Claims struct,
@@ -140,6 +216,15 @@ pub fn generate_jwt(
     };
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(secret))
+}
+
+
+pub fn generate_refresh_token() -> String {
+    rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(64) // 64 chars ~= 384 bits
+        .map(char::from)
+        .collect()
 }
 
 
@@ -194,21 +279,3 @@ pub fn get_jwt_secret() -> Result<String, std::env::VarError> {
     std::env::var("JWT_SECRET")
 }
 
-
-/**
- * Send in the request and we'll extract the UserReqData for you.
- * If it doesn't exist we'll assumed the user is a guest, and we will
- * make a new UserReqData for you.
- * The middleware already checked the jwt to get the user data.
- * This is where we retrieve the result of that check for each route.
- */
-pub fn get_user_req_data(req: &HttpRequest) -> UserReqData {
-    let guest_user: UserReqData = UserReqData::new(None);
-    let extensions: std::cell::Ref<'_, actix_web::dev::Extensions> = req.extensions();
-
-    // Get user data from req
-    match extensions.get::<UserReqData>() {
-        Some(user_data) => user_data,
-        None => &guest_user
-    }.to_owned()
-}

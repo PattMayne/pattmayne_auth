@@ -1,8 +1,4 @@
-/** 
- * 
- * 
- * 
- * 
+/* 
  * ====================
  * ====================
  * =====          =====
@@ -12,6 +8,9 @@
  * ====================
  * 
  * 
+ * 
+ * Functions to be called when user request hits endpoints listed
+ * in the main function.
  * 
  * 
  */
@@ -30,7 +29,27 @@ use crate::db;
 use crate::utils;
 use crate::auth;
 
-/*   STRUCTS for JSON SERIALIZATION (outgoing data) */
+/* 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * =======================================
+ * =======================================
+ * =====                             =====
+ * =====  STRUCTS for SERIALIZATION  =====
+ * =====                             =====
+ * =======================================
+ * =======================================
+ * 
+ * 
+ * (outgoing data)
+ * 
+ * 
+ * 
+ * 
+ */
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -112,7 +131,30 @@ impl BadPassword {
     }
 }
 
-/*   STRUCTS for JSON DE-SERIALIZATION (incoming data) */
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ==========================================
+ * ==========================================
+ * =====                                =====
+ * =====  STRUCTS for DE-SERIALIZATION  =====
+ * =====                                =====
+ * ==========================================
+ * ==========================================
+ * 
+ * for JSON DE-SERIALIZATION (incoming data)
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 
 
 // Store credentials when user tries to register
@@ -194,7 +236,9 @@ struct DashboardTemplate<'a> {
 
 
 
-/** 
+/*
+ * 
+ * 
  * 
  * 
  * 
@@ -206,6 +250,8 @@ struct DashboardTemplate<'a> {
  * =====               =====
  * =========================
  * =========================
+ * 
+ * 
  * 
  * 
  * 
@@ -392,7 +438,8 @@ fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             match jwt_result {
                 Ok(jwt) => {
                     // TOTAL SUCCESS: Returning auth data in a json
-                    let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
+                    //let refresh_token: String = String::from("PLACEHOLDER_REFRESH_TOKEN");
+                    let refresh_token: String = auth::generate_refresh_token();
 
                     let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
                         jwt,
@@ -562,7 +609,9 @@ pub async fn logout_post() -> HttpResponse {
 
 
 
-/** 
+/* 
+ * 
+ * 
  * 
  * 
  * 
@@ -574,6 +623,8 @@ pub async fn logout_post() -> HttpResponse {
  * =====              =====
  * ========================
  * ========================
+ * 
+ * 
  * 
  * 
  * 
@@ -712,6 +763,8 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
  * 
  * 
  * 
+ * 
+ * 
  * ==============================
  * ==============================
  * =====                    =====
@@ -719,6 +772,8 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
  * =====                    =====
  * ==============================
  * ==============================
+ * 
+ * 
  * 
  * 
  * 

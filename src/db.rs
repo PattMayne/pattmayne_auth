@@ -9,6 +9,25 @@ use anyhow::{ Result, anyhow };
 use serde;
 
 
+/* 
+ * 
+ * 
+ * 
+ * 
+ * =============================
+ * =============================
+ * =====                   =====
+ * =====  STRUCTS & ENUMS  =====
+ * =====                   =====
+ * =============================
+ * =============================
+ * 
+ * 
+ * 
+ * 
+ */
+
+
 // use pattern matching in an impl function to get a String to store to DB
 pub enum UserRole {
     Admin,
@@ -73,62 +92,38 @@ impl User {
         }
     }
 
-        pub fn get_last_name(&self) -> String {
+    pub fn get_last_name(&self) -> String {
         match self.last_name.clone() {
             Some(last_name) => last_name.to_owned(),
             None => String::new()
         }
     }
 
-
 }
 
 
 
-pub async fn create_pool() -> Result<MySqlPool> {
-     // Load environment variables from .env file.
-    // CHECK: Fails if .env file not found, not readable or invalid.
-    let database_url = std::env::var("DATABASE_URL")?;
-    
-    Ok(MySqlPool::connect(database_url.as_str()).await?)
-}
 
 
-
-/**
- * Used when a user registers. We must hash their password so that the raw
- * password is never stored in the DB.
- * We take ownership of the input String so it's annihilated after fn runs.
- * @return String (hashed password)
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  SELECT FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * retrieving data from the DB
+ * 
+ * 
+ * 
  */
-pub fn hash_password(input_password: String) -> String {
-    let salt: SaltString = SaltString::generate(&mut OsRng);
 
-    // Hash the password and return
-    Argon2::default().hash_password(
-        input_password.as_bytes(),
-        &salt
-    ).unwrap().to_string()
-}
-
-/**
- * When a user logs in we take their raw password string and verify it against
- * the stored hashed password.
- * @return bool (matches or does not match)
- */
-pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
-    let parsed_stored_hash: PasswordHash<'_> = PasswordHash::new(&stored_hash).unwrap();
-    let argon2: Argon2<'_> = Argon2::default();
-
-    // returns a bool
-    argon2.verify_password(
-        input_password.as_bytes(),
-        &parsed_stored_hash
-    ).is_ok()
-}
-
-
-// RETRIEVE USER FUNCTIONS
 
 pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
     let pool: MySqlPool = create_pool().await?;
@@ -171,8 +166,159 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
 }
 
 
+/* 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  INSERT FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * Adding new entries to the database
+ * 
+ * 
+ * 
+ * 
+ */
+
+
+// Add new user to database
+pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
+    // map_err changes a possible error into the return type of error I return in the closure
+    // This is simpler and more idiomatic than doing a match
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    // hash the password
+    let password_hash: String = hash_password(password);
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+            "INSERT INTO users (
+                username,
+                email,
+                password_hash)
+            VALUES (?, ?, ?)")
+        .bind(username)
+        .bind(email)
+        .bind(&password_hash)
+        .execute(&pool).await.map_err(|e| {
+            eprintln!("Failed to save user to database: {:?}", e);
+            anyhow!("Could not save user to database: {e}")
+        })?;
+
+    Ok(result.last_insert_id() as i32)
+}
+
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  UPDATE FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * 
+ * update existing entries in the DB
+ * 
+ * 
+ * 
+ */
+
+
+
+pub async fn update_real_names(
+    first_name: &String,
+    last_name: &String,
+    id: i32
+)-> Result<i32, anyhow::Error> {
+    println!("called update_names database function");
+     // map_err changes a possible error into the return type of error I return in the closure
+    // This is simpler and more idiomatic than doing a match
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
+            .bind(first_name)
+            .bind(last_name)
+            .bind(id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}
+
+
+/**
+ * User is updating password.
+ * Route has already confirmed that it's an acceptable password.
+ * Hash it and save it to the database.
+ */
+pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
+    let hashed_password: String = hash_password(password.to_owned());
+
+    // save password to DB and return positive result
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "UPDATE users SET password_hash = ? WHERE id = ?")
+            .bind(hashed_password)
+            .bind(id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}
+
+
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  HELPER FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * 
+ * Functions which facilitate the processing of the above DB functions
+ * 
+ * 
+ * 
+ */
+
+
+
 // Pre-check for duplicates
 // TO DO: errors cannot return false. We haven't confirmed the values are unique.
+// ACTUALLY don't bother. Instead, deal with broken pools when doing the actual insert.
 
 // check if username already exists in DB
 pub async fn username_taken(username: &String) -> bool {
@@ -228,82 +374,43 @@ pub async fn email_taken(email: &String) -> bool {
 }
 
 
-// Add new user to database
-pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
-    // map_err changes a possible error into the return type of error I return in the closure
-    // This is simpler and more idiomatic than doing a match
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
 
-    // hash the password
-    let password_hash: String = hash_password(password);
-
-    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-            "INSERT INTO users (
-                username,
-                email,
-                password_hash)
-            VALUES (?, ?, ?)")
-        .bind(username)
-        .bind(email)
-        .bind(&password_hash)
-        .execute(&pool).await.map_err(|e| {
-            eprintln!("Failed to save user to database: {:?}", e);
-            anyhow!("Could not save user to database: {e}")
-        })?;
-
-    Ok(result.last_insert_id() as i32)
-}
-
-
-pub async fn update_real_names(
-    first_name: &String,
-    last_name: &String,
-    id: i32
-)-> Result<i32, anyhow::Error> {
-    println!("called update_names database function");
-     // map_err changes a possible error into the return type of error I return in the closure
-    // This is simpler and more idiomatic than doing a match
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
-    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
-            .bind(first_name)
-            .bind(last_name)
-            .bind(id)
-            .execute(&pool)
-            .await?;
-
-    Ok(result.rows_affected() as i32)
+pub async fn create_pool() -> Result<MySqlPool> {
+     // Load environment variables from .env file.
+    // CHECK: Fails if .env file not found, not readable or invalid.
+    let database_url: String = std::env::var("DATABASE_URL")?;
+    Ok(MySqlPool::connect(database_url.as_str()).await?)
 }
 
 
 /**
- * User is updating password.
- * Route has already confirmed that it's an acceptable password.
- * Hash it and save it to the database.
+ * Used when a user registers. We must hash their password so that the raw
+ * password is never stored in the DB.
+ * We take ownership of the input String so it's annihilated after fn runs.
+ * @return String (hashed password)
  */
-pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
-    let hashed_password: String = hash_password(password.to_owned());
+pub fn hash_password(input_password: String) -> String {
+    let salt: SaltString = SaltString::generate(&mut OsRng);
 
-    // save password to DB and return positive result
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
-    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-        "UPDATE users SET password_hash = ? WHERE id = ?")
-            .bind(hashed_password)
-            .bind(id)
-            .execute(&pool)
-            .await?;
-
-    Ok(result.rows_affected() as i32)
+    // Hash the password and return
+    Argon2::default().hash_password(
+        input_password.as_bytes(),
+        &salt
+    ).unwrap().to_string()
 }
 
+/**
+ * When a user logs in we take their raw password string and verify it against
+ * the stored hashed password.
+ * @return bool (matches or does not match)
+ */
+pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
+    let parsed_stored_hash: PasswordHash<'_> = PasswordHash::new(&stored_hash).unwrap();
+    let argon2: Argon2<'_> = Argon2::default();
+
+    // returns a bool
+    argon2.verify_password(
+        input_password.as_bytes(),
+        &parsed_stored_hash
+    ).is_ok()
+}

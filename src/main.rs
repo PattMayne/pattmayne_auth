@@ -11,6 +11,17 @@ mod utils;
 mod auth;
 mod middleware;
 
+/**
+ * The main function logs all the routes as routes or "services".
+ * A service route takes a route function which has used a macro to declare
+ * its path.
+ * Other routes ( .route) take a path and then a function to call when the path
+ * is requested.
+ * 
+ * Add middleware at the point in the chain where its changes will become needed.
+ * If you add middleware before static it will be called multiple times (bad, don't do).
+ * Add it too late and its changes won't be available where needed.
+ */
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // dotenvy loads env variables for whole app
