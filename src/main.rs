@@ -47,6 +47,7 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::update_names)
                     .service(routes::update_password)
             )
+            .wrap(from_fn(middleware::jwt_cookie_middleware))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

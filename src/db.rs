@@ -1,6 +1,6 @@
 // I'm actually using MariaDB which is supposedly a drop-in replacement for MySQL
 
-use sqlx::{MySqlPool, any };
+use sqlx::{MySqlPool };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use password_hash::{SaltString, PasswordHash};
@@ -8,7 +8,6 @@ use time::{ OffsetDateTime, Duration };
 use anyhow::{ Result, anyhow };
 use serde;
 
-use crate::auth;
 use crate::utils;
 
 /* 
@@ -52,6 +51,28 @@ pub struct User {
     password_hash: String,
     created_timestamp: OffsetDateTime,
     email_verified: i8 // actually a bool but mysql doesn't do "real" bools
+}
+
+#[derive(serde::Serialize)]
+pub struct RefreshToken {
+    id: i32,
+    user_id: i32,
+    client_id: String,
+    token: String,
+    created_timestamp: OffsetDateTime,
+    expires_timestamp: OffsetDateTime
+}
+
+impl RefreshToken {
+    pub fn get_token(&self) -> &String { &self.token }
+    pub fn get_client_id(&self) -> &String { &self.client_id }
+    pub fn get_user_id(&self) -> i32 { self.user_id }
+    pub fn get_created_timestamp(&self) -> &OffsetDateTime { &self.created_timestamp }
+    pub fn get_expires_timestamp(&self) -> &OffsetDateTime { &self.expires_timestamp }
+
+    pub fn is_expired(&self) -> bool {
+        self.expires_timestamp < OffsetDateTime::now_utc()
+    }
 }
 
 
@@ -168,6 +189,19 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
 }
 
 
+pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option<RefreshToken>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        RefreshToken,
+        "SELECT id, user_id, client_id,
+            token, created_timestamp, expires_timestamp
+            FROM refresh_tokens WHERE user_id = ? AND client_id = ?",
+        user_id, client_id
+    ).fetch_optional(&pool).await?)
+}
+
+
 /* 
  * 
  * 
@@ -269,6 +303,7 @@ pub async fn add_user(username: &String, email: &String, password: String) -> Re
 
 /**
  * When the server starts up we make sure there is an admin.
+ * Their default pre-hashed password is saved in an env variable.
  */
 pub async fn create_primary_admin() -> Result<bool, anyhow::Error> {
     let pool: MySqlPool = create_pool().await.map_err(|e| {

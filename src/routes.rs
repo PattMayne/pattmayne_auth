@@ -431,11 +431,10 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
         Ok(jwt_secret) => {
 
             // Secret exists. Now let's generate the actual token
-            let jwt_result: Result<String, jsonwebtoken::errors::Error> = auth::generate_jwt(
+            let jwt_result: Result<String, auth::AuthError> = auth::generate_jwt(
                 user.get_id(),
                 user.get_username().to_owned(),
-                user.get_role().to_owned(),
-                jwt_secret.as_bytes()
+                user.get_role().to_owned()
             );
 
             // Make sure we really got a token
@@ -476,8 +475,8 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
                 },
 
                 // No token. Show error
-                Err(e) => {
-                    eprint!("Internal Server Error: {e}");
+                Err(_e) => {
+                    eprint!("Internal Server Error: JWT AuthError");
                     jwt_err_500
                 }
             }          

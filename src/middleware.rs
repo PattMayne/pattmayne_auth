@@ -1,5 +1,14 @@
-/*
- * NOTES ABOUT MIDDLEWARE:
+/* 
+ * ========================
+ * ========================
+ * =====              =====
+ * =====  MIDDLEWARE  =====
+ * =====              =====
+ * ========================
+ * ========================
+ * 
+ * 
+ * 
  * If multiple middleware functions are chained in the App::new() chain (inside a wrap() function)
  * they are each called in sequence, and they can each act upon the request and change the request.
  * In any function, post-processing can happen after the next.call(req).await call.
@@ -12,7 +21,21 @@ use actix_web::{
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
     middleware::{ Next } };
 
-use crate::auth;
+use crate::{auth, db, utils};
+
+
+pub struct NewJwtObj {
+    token: String
+}
+
+impl NewJwtObj {
+    pub fn new(token: String) -> Self {
+        NewJwtObj { token }
+    }
+
+    pub fn get_token(&self) -> &String { &self.token }
+}
+
 
 /* MIDDLEWARE FUNCTIONS */
 
@@ -26,16 +49,78 @@ use crate::auth;
  * we must check for a valid refresh token in the cookie.
  * If valid refresh token exists, generate and deliver a new JWT.
  * Cookie will be added in post-processing based on previously explained logic.
+ * 
+ * TODO: This is deeply nested. Rewrite it to be more readable.
  */
 pub async fn login_status_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
-) -> Result<ServiceResponse<impl MessageBody>, Error> { 
+) -> Result<ServiceResponse<impl MessageBody>, Error> {
+
+    // check first for refresh_token existence, then for jwt validity
     let user_req_data: auth::UserReqData = match req.cookie("jwt") {
         Some(cookie) => {
-            match auth::verify_jwt(cookie.value()) {
-                Ok(claims) => auth::UserReqData::new(Some(claims)),
-                Err(_e) => auth::UserReqData::new(None)
+            match auth::verify_jwt(cookie.value()).await {
+                auth::JwtVerification::Valid(claims) => {
+                    auth::UserReqData::new(Some(claims))
+                },
+                auth::JwtVerification::Expired(claims) => {
+                    // JWT is expired but otherwise valid.
+                    // set an object in the req to send a new cookie
+                    /* 
+                     * PROCESS:
+                     * => check REFRESH TOKEN
+                     * => if that is valid (and non-expired):
+                     * ====> set FLAG for setting the new JWT
+                     * => ELSE (TO DO)
+                     * ====> set FLAG to make user log in again
+                     */
+                    
+                    // Check the cookies for a refresh_token
+                    match req.cookie("refresh_token") {
+                        Some(r_tkn_ckie) => {
+                            // check DB for refresh_token to compare
+                            match db::get_refresh_token(
+                                    claims.get_sub(),
+                                    utils::auth_client_id()
+                                ).await {
+                                    Ok(db_tk_opt) => {
+                                        match db_tk_opt {
+                                            Some(r_tkn_db) => {
+                                                let r_tkn_valid: bool = 
+                                                    r_tkn_ckie.value() == r_tkn_db.get_token() &&
+                                                    !r_tkn_db.is_expired();
+
+                                                if r_tkn_valid {
+                                                    // CREATE and GIVE NEW JWT
+                                                    let new_jwt_rslt: Result<String, auth::AuthError> =
+                                                        auth::generate_jwt(
+                                                            claims.get_sub(),
+                                                            claims.get_username().to_owned(),
+                                                            claims.get_role().to_owned()
+                                                        );
+                                                    match new_jwt_rslt {
+                                                        Ok(new_jwt) => {
+                                                            // Put the NewJwtObj in the req
+                                                            req.extensions_mut().insert(NewJwtObj::new(new_jwt));
+                                                            auth::UserReqData::new(Some(claims))
+                                                        },
+                                                        Err(_e) => auth::UserReqData::new(None)
+                                                    }
+                                                } else {
+                                                    auth::UserReqData::new(None)
+                                                }                                                
+                                            },
+                                            None => auth::UserReqData::new(None)
+                                        }
+                                    },
+                                    Err(_e) => auth::UserReqData::new(None)
+                                }
+                        },
+                        None => auth::UserReqData::new(None)
+                    }                    
+                },
+                auth::JwtVerification::Invalid => auth::UserReqData::new(None)
             }
         },
         None => auth::UserReqData::new(None)
@@ -45,6 +130,34 @@ pub async fn login_status_middleware(
     req.extensions_mut().insert(user_req_data);
 
     next.call(req).await
+}
+
+
+pub async fn jwt_cookie_middleware<B>(
+    req: ServiceRequest,
+    next: Next<B>,
+) -> Result<ServiceResponse<B>, Error> where B: MessageBody, {
+
+    let mut res: ServiceResponse<B> = next.call(req).await?;
+
+    let new_jwt: Option<String> = res
+        .request()
+        .extensions()
+        .get::<NewJwtObj>()
+        .map(|obj| obj.get_token().to_owned());
+
+    // After handler, check for the NewJwt flag and add cookie if present
+    if let Some(token) = new_jwt {
+        println!("INSERTING NEW JWT COOKIE");
+        let cookie: actix_web::cookie::Cookie<'_> =
+            auth::build_token_cookie(
+                token,
+                String::from("jwt")
+            );
+
+        res.response_mut().add_cookie(&cookie).ok();
+    }
+    Ok(res)
 }
 
 // NOTE FOR LATER: HOW TO ADD A COOKIE WITH NEW JWT WHEN NEEDED (it will inevitable be needed!)

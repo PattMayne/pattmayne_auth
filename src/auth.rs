@@ -1,11 +1,13 @@
 use jsonwebtoken::{
-    encode, Header, EncodingKey, decode,
-    DecodingKey, Validation, Algorithm, errors::Error };
+    encode, Header, EncodingKey, decode, dangerous::insecure_decode,
+    DecodingKey, Validation, Algorithm, errors::{ Error, ErrorKind} };
 use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
-use actix_web::{ HttpRequest, HttpMessage, cookie::{Cookie, SameSite}};
+use actix_web::{ HttpMessage, HttpRequest, HttpResponse, cookie::{Cookie, SameSite}};
 use rand::{distr::Alphanumeric, Rng};
 
+use crate::db;
+use crate::utils;
 
 /*
  * 
@@ -91,6 +93,18 @@ pub struct Claims {
     role: String,
     username: String,
     exp: usize, // expiration as a timestamp (seconds since epoch)
+}
+
+pub enum JwtVerification {
+    Valid(Claims),
+    Expired(Claims),
+    Invalid
+}
+
+#[derive(Debug)]
+pub enum AuthError {
+    Jwt(jsonwebtoken::errors::Error),
+    MissingJwtSecret,
 }
 
 /* 
@@ -203,10 +217,11 @@ pub fn generate_jwt(
     user_id: i32,
     username: String,
     role: String,
-    secret: &[u8]
-) -> Result<String, jsonwebtoken::errors::Error> {
+    //secret: &[u8]
+) -> Result<String, AuthError> {
     // Set expiration for 1 hour from now
-    let exp: usize = (OffsetDateTime::now_utc() + Duration::hours(1)).unix_timestamp() as usize;
+    let exp: usize = (OffsetDateTime::now_utc() + Duration::hours(1))
+        .unix_timestamp() as usize;
 
     let claims: Claims = Claims {
         sub: user_id,
@@ -215,7 +230,22 @@ pub fn generate_jwt(
         exp,
     };
 
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret))
+    match get_jwt_secret() {
+        Ok(secret) => {
+            // secret exists in env variables. Encode and match the result
+            let jwt_result: Result<String, Error> =
+                encode(
+                    &Header::default(),
+                    &claims,
+                    &EncodingKey::from_secret(secret.as_bytes())
+                );
+            match jwt_result {
+                Ok(jwt) => Ok(jwt),
+                Err(_e) => Err(AuthError::MissingJwtSecret)
+            }
+        },
+        Err(_e) => Err(AuthError::MissingJwtSecret)
+    }    
 }
 
 
@@ -253,27 +283,37 @@ pub fn build_token_cookie(token: String, name: String) -> Cookie<'static> {
 
 
 /**
- * Decode the jwt string, check it against the Claims struct, and check
- * expiry date. If all is well, return the Claims stuct in case we want to
+ * Decode the jwt string, check it against the Claims struct.
+ * If the JWT is expired, we will still return the Claims (using insecure_decode)
+ * and the receiver must check the expiry date in the claims.
+ * If all is well, return the Claims stuct in case we want to
  * use that data or check it against DB data.
  */
-pub fn verify_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+pub async fn verify_jwt(token: &str) -> JwtVerification {
     // get the jwt secret so we can decode the jwt string
     let secret: String = match get_jwt_secret() {
         Ok(s) => s,
-        Err(_e) =>
-            return Err(jsonwebtoken::errors::Error::from(
-                jsonwebtoken::errors::ErrorKind::InvalidKeyFormat ))
+        Err(_e) => return JwtVerification::Invalid
     };
 
     // HS256 algorithm matches the header default I use to encode
-    let validation: Validation = Validation::new(Algorithm::HS256);
-    let token_data: jsonwebtoken::TokenData<Claims> = decode::<Claims>(
+    match decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_ref()),
-        &validation,
-    )?;
-    Ok(token_data.claims)
+        &Validation::new(Algorithm::HS256),
+    ) {
+        Ok(token_data) => JwtVerification::Valid(token_data.claims), // good. send.
+        Err(e) => match *e.kind() {
+            ErrorKind::ExpiredSignature => {
+                match insecure_decode::<Claims>(token) {
+                    Ok(token_data) => JwtVerification::Expired(token_data.claims),
+                    Err(_e) => JwtVerification::Invalid
+                }
+            },
+            _ => JwtVerification::Invalid
+        }
+    }
+    
 }
 
 
