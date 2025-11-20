@@ -3,12 +3,10 @@ use jsonwebtoken::{
     DecodingKey, Validation, Algorithm, errors::{ Error, ErrorKind} };
 use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
-use actix_web::{ HttpMessage, HttpRequest, HttpResponse, cookie::{Cookie, SameSite}};
+use actix_web::{ HttpMessage, HttpRequest, cookie::{Cookie, SameSite}};
 use rand::{distr::Alphanumeric, Rng};
 use std::fmt;
 
-use crate::db;
-use crate::utils;
 
 /*
  * 

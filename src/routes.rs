@@ -22,7 +22,6 @@ use actix_web::{
 use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
-use time::{ OffsetDateTime };
 
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::db;
@@ -581,9 +580,14 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
 
 
 #[post("/logout")]
-pub async fn logout_post() -> HttpResponse {
+pub async fn logout_post(req: HttpRequest) -> HttpResponse {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+    let user_id = match user_req_data.id {
+        Some(id) => id,
+        None => 0
+    };
 
-    println!("kenny loggin out");
+    println!("kenny loggin out user id: {}", user_id);
 
     let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
         .path("/")
@@ -597,6 +601,11 @@ pub async fn logout_post() -> HttpResponse {
         .max_age(time::Duration::seconds(0))
         .http_only(true)
         .finish();
+
+    match db::delete_refresh_token(user_id).await {
+        Ok(_rows_deleted) => {},
+        Err(e) => {eprint!("Database error: {e}")}
+    }
 
     HttpResponse::Ok()
         .cookie(jwt_cookie)
@@ -642,7 +651,9 @@ async fn home(req: HttpRequest) -> impl Responder {
 
     // ORIGINAL CODE FOLLOWS
 
-    let state_string: &str = if user_req_data.logged_in { "YOU ARE LOGGED IN" } else { "NOT LOGGED IN" };
+    let state_string: &str =
+        if user_req_data.logged_in { "YOU ARE LOGGED IN" }
+        else { "NOT LOGGED IN" };
     let title: &str = "Pattmayne Games";
 
     let home_template: HomeTemplate<'_> = HomeTemplate {
@@ -721,7 +732,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                 Ok(None) => {
                     return send_to_login();
                 },
-                Err(e) => {
+                Err(_e) => {
                     // redirect to ERROR PAGE
                     return HttpResponse::Found()
                         .append_header((header::LOCATION, "/error"))

@@ -501,6 +501,43 @@ pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::E
 }
 
 
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  DELETE FUNCTIONS  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * 
+ * 
+ * 
+ */
+
+
+/**
+ * When a user logs out of a site, delete all their refresh tokens
+ */
+pub async fn delete_refresh_token(user_id: i32) -> Result<i32, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "DELETE FROM refresh_tokens WHERE user_id = ?")
+            .bind(user_id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}
+
 
 
 /* 

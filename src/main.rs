@@ -1,6 +1,6 @@
 #![allow(dead_code)] // dead code come on I'm just not using the fields yet.
 
-use actix_web::{ App, HttpServer, middleware::{from_fn}, test, web };
+use actix_web::{ App, HttpServer, middleware::{from_fn}, web };
 use actix_files::Files;
 use dotenvy;
 
