@@ -220,7 +220,8 @@ pub fn generate_jwt(
     //secret: &[u8]
 ) -> Result<String, AuthError> {
     // Set expiration for 1 hour from now
-    let exp: usize = (OffsetDateTime::now_utc() + Duration::hours(1))
+    //let exp: usize = (OffsetDateTime::now_utc() + Duration::hours(1))
+    let exp: usize = (OffsetDateTime::now_utc() + Duration::seconds(7))
         .unix_timestamp() as usize;
 
     let claims: Claims = Claims {

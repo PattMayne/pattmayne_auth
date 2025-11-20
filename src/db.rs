@@ -63,6 +63,7 @@ pub struct RefreshToken {
     expires_timestamp: OffsetDateTime
 }
 
+
 impl RefreshToken {
     pub fn get_token(&self) -> &String { &self.token }
     pub fn get_client_id(&self) -> &String { &self.client_id }

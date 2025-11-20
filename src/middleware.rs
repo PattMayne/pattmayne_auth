@@ -16,6 +16,8 @@
  */
 
 
+use std::default;
+
 use actix_web::{
     Error, HttpMessage,
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
@@ -57,74 +59,13 @@ pub async fn login_status_middleware(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
 
-    // check first for refresh_token existence, then for jwt validity
-    let user_req_data: auth::UserReqData = match req.cookie("jwt") {
-        Some(cookie) => {
-            match auth::verify_jwt(cookie.value()).await {
-                auth::JwtVerification::Valid(claims) => {
-                    auth::UserReqData::new(Some(claims))
-                },
-                auth::JwtVerification::Expired(claims) => {
-                    // JWT is expired but otherwise valid.
-                    // set an object in the req to send a new cookie
-                    /* 
-                     * PROCESS:
-                     * => check REFRESH TOKEN
-                     * => if that is valid (and non-expired):
-                     * ====> set FLAG for setting the new JWT
-                     * => ELSE (TO DO)
-                     * ====> set FLAG to make user log in again
-                     */
-                    
-                    // Check the cookies for a refresh_token
-                    match req.cookie("refresh_token") {
-                        Some(r_tkn_ckie) => {
-                            // check DB for refresh_token to compare
-                            match db::get_refresh_token(
-                                    claims.get_sub(),
-                                    utils::auth_client_id()
-                                ).await {
-                                    Ok(db_tk_opt) => {
-                                        match db_tk_opt {
-                                            Some(r_tkn_db) => {
-                                                let r_tkn_valid: bool = 
-                                                    r_tkn_ckie.value() == r_tkn_db.get_token() &&
-                                                    !r_tkn_db.is_expired();
-
-                                                if r_tkn_valid {
-                                                    // CREATE and GIVE NEW JWT
-                                                    let new_jwt_rslt: Result<String, auth::AuthError> =
-                                                        auth::generate_jwt(
-                                                            claims.get_sub(),
-                                                            claims.get_username().to_owned(),
-                                                            claims.get_role().to_owned()
-                                                        );
-                                                    match new_jwt_rslt {
-                                                        Ok(new_jwt) => {
-                                                            // Put the NewJwtObj in the req
-                                                            req.extensions_mut().insert(NewJwtObj::new(new_jwt));
-                                                            auth::UserReqData::new(Some(claims))
-                                                        },
-                                                        Err(_e) => auth::UserReqData::new(None)
-                                                    }
-                                                } else {
-                                                    auth::UserReqData::new(None)
-                                                }                                                
-                                            },
-                                            None => auth::UserReqData::new(None)
-                                        }
-                                    },
-                                    Err(_e) => auth::UserReqData::new(None)
-                                }
-                        },
-                        None => auth::UserReqData::new(None)
-                    }                    
-                },
-                auth::JwtVerification::Invalid => auth::UserReqData::new(None)
-            }
-        },
-        None => auth::UserReqData::new(None)
-    };
+    let guest_data: auth::UserReqData = auth::UserReqData::new(None);
+    let user_req_data_opt: Option<actix_web::cookie::Cookie<'_>> = req.cookie("jwt");
+    let user_req_data: auth::UserReqData = get_user_req_data_from_opt(
+        user_req_data_opt,
+        &req,
+        guest_data
+    ).await?;
 
     // Put UserReqData into the request object to identify user to all routes.
     req.extensions_mut().insert(user_req_data);
@@ -183,3 +124,81 @@ pub async fn jwt_cookie_middleware<B>(
 
 
 */
+
+// This should return a result so we can return errors (now that it's getting simpler)
+async fn get_user_req_data_from_opt(
+    option: Option<actix_web::cookie::Cookie<'_>>,
+    req: &ServiceRequest,
+    guest_data: auth::UserReqData
+) -> Result<auth::UserReqData, Error> {
+    // This was deeply nested match expressions, so we're checking for none instead
+
+    if option.is_none() { return Ok(guest_data); }
+    let jwt_cookie: actix_web::cookie::Cookie<'_> = option.unwrap();
+
+    // Must use match here because of multiple enums
+    match auth::verify_jwt(jwt_cookie.value()).await {
+        auth::JwtVerification::Valid(claims) => {
+            Ok(auth::UserReqData::new(Some(claims)))
+        },
+        auth::JwtVerification::Expired(claims) => {
+            // JWT is expired but otherwise valid.
+            // set an object in the req to send a new cookie
+            /* 
+                * PROCESS:
+                * => check REFRESH TOKEN
+                * => if that is valid (and non-expired):
+                * ====> set FLAG for setting the new JWT
+                * => ELSE (TO DO)
+                * ====> set FLAG to make user log in again
+                */
+            
+            // Check the cookies for a refresh_token
+            let r_token_optn = req.cookie("refresh_token");
+            if r_token_optn.is_none() { return Ok(guest_data); }
+            let r_tkn_ckie: actix_web::cookie::Cookie<'_> = r_token_optn.unwrap();
+
+            // check DB for refresh_token to compare
+            let r_db_token_result: Result<Option<db::RefreshToken>, anyhow::Error> = db::get_refresh_token(
+                claims.get_sub(),
+                utils::auth_client_id()
+            ).await;
+
+            if r_db_token_result.is_err() {
+                // actully return an error when we switch to Result return type
+                return Ok(guest_data);
+            }
+
+            let r_db_token_option: Option<db::RefreshToken> = r_db_token_result.unwrap();
+            if r_db_token_option.is_none() { return Ok(guest_data); }
+            let r_db_token = r_db_token_option.unwrap();
+
+            let r_tkn_valid: bool = 
+                r_tkn_ckie.value() == r_db_token.get_token() &&
+                !r_db_token.is_expired();
+
+            if r_tkn_valid {
+                // CREATE and GIVE NEW JWT
+                let new_jwt_rslt: Result<String, auth::AuthError> =
+                    auth::generate_jwt(
+                        claims.get_sub(),
+                        claims.get_username().to_owned(),
+                        claims.get_role().to_owned()
+                    );
+                
+                if new_jwt_rslt.is_err() {
+                    // actully return an error when we switch to Result return type
+                    return Ok(guest_data);
+                }
+
+                let new_jwt = new_jwt_rslt.unwrap();
+                req.extensions_mut().insert(NewJwtObj::new(new_jwt));
+                println!("getting new JWT");
+                return Ok(auth::UserReqData::new(Some(claims)));
+            } else {
+                Ok(guest_data)
+            }                   
+        },
+        auth::JwtVerification::Invalid => Ok(guest_data)
+    }
+}
