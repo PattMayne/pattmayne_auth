@@ -439,8 +439,6 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
     // Make sure we really got a token
     match jwt_result {
         Ok(jwt) => {
-            // SUCCESS: Returning auth data in a json
-
             // create a refresh_token and put it in the DB
             let refresh_token: String = auth::generate_refresh_token();
             match db::add_refresh_token(

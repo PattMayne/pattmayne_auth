@@ -5,6 +5,7 @@ use serde::{ Serialize, Deserialize };
 use time::{ Duration, OffsetDateTime };
 use actix_web::{ HttpMessage, HttpRequest, HttpResponse, cookie::{Cookie, SameSite}};
 use rand::{distr::Alphanumeric, Rng};
+use std::fmt;
 
 use crate::db;
 use crate::utils;
@@ -119,6 +120,26 @@ pub struct UserReqData {
     pub username: Option<String>,
     pub role: String, // guest, player, admin
     pub logged_in: bool,
+}
+
+
+impl fmt::Display for AuthError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let msg: String = match self {
+            AuthError::MissingJwtSecret => "Missing JWT Secret".to_owned(),
+            AuthError::Jwt(err) => format!("JWT error: {}", err),
+        };
+        write!(f, "{}", msg)
+    }
+}
+
+impl std::error::Error for AuthError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            AuthError::Jwt(err) => Some(err),
+            AuthError::MissingJwtSecret => None,
+        }
+    }
 }
 
 /**

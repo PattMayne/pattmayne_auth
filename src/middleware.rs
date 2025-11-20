@@ -19,7 +19,7 @@
 use std::default;
 
 use actix_web::{
-    Error, HttpMessage,
+    error, Error, HttpMessage,
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
     middleware::{ Next } };
 
@@ -69,7 +69,6 @@ pub async fn login_status_middleware(
 
     // Put UserReqData into the request object to identify user to all routes.
     req.extensions_mut().insert(user_req_data);
-
     next.call(req).await
 }
 
@@ -131,7 +130,7 @@ async fn get_user_req_data_from_opt(
     req: &ServiceRequest,
     guest_data: auth::UserReqData
 ) -> Result<auth::UserReqData, Error> {
-    // This was deeply nested match expressions, so we're checking for none instead
+    // This was deeply nested match expressions, so we're checking for none/err instead
 
     if option.is_none() { return Ok(guest_data); }
     let jwt_cookie: actix_web::cookie::Cookie<'_> = option.unwrap();
@@ -164,9 +163,8 @@ async fn get_user_req_data_from_opt(
                 utils::auth_client_id()
             ).await;
 
-            if r_db_token_result.is_err() {
-                // actully return an error when we switch to Result return type
-                return Ok(guest_data);
+            if let Err(e) = r_db_token_result {
+                return Err(error::ErrorInternalServerError(e.to_string()));
             }
 
             let r_db_token_option: Option<db::RefreshToken> = r_db_token_result.unwrap();
@@ -185,10 +183,9 @@ async fn get_user_req_data_from_opt(
                         claims.get_username().to_owned(),
                         claims.get_role().to_owned()
                     );
-                
-                if new_jwt_rslt.is_err() {
-                    // actully return an error when we switch to Result return type
-                    return Ok(guest_data);
+
+                if let Err(e) = new_jwt_rslt {
+                    return Err(error::ErrorInternalServerError(e.to_string()));
                 }
 
                 let new_jwt = new_jwt_rslt.unwrap();
