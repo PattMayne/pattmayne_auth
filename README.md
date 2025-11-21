@@ -1,7 +1,7 @@
 # PATTMAYNE AUTH
 
 An authentication app I will use to serve a few web apps and games I intend to make.
-I'll use JSON webtokens (JWTs) and a database, reinforced by refresh_tokens.
+I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
 
 ### TO DO:
  * create resources file (probably just a constants file)
@@ -13,17 +13,11 @@ I'll use JSON webtokens (JWTs) and a database, reinforced by refresh_tokens.
  * Containerize with Docker
  * Switch to PostgreSQL because bools are bools instead of ints (but maybe that's not important)
  * move env variable from .env to somewhere more secure for production
- * Checking that user is logged in (UserReqData has id) uses cumbersome nested pattern matching
- * * update this into some kind of function, or at least simpler code
- * * match { Ok() => None should always return to login (repeated code)
- * * Err should be able to get some Error code (?) and send to the Error page
- * Test Error page
  * Make Error page take Http code args and maybe a message
  * Remove magic strings from front-end JS. Put them in globals or resources file.
  * Make tests, especially for error page.
  * Table in DB to store accepted sites (client sites)
- * Relational table to give users refresh_token for each site
- * * The token relation of user_client should be unique.
+ * Admin page for adding/removing client sites
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
