@@ -445,7 +445,7 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
                 utils::auth_client_id(),
                 &refresh_token
             ).await {
-                Ok(_rows_affected) =>{
+                Ok(_rows_affected) => {
                     // Refresh token successfully inserted into DB
                     // Now make the cookies and set them in the req
                     let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
