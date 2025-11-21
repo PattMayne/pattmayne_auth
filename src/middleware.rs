@@ -39,17 +39,11 @@ impl NewJwtObj {
 /* MIDDLEWARE FUNCTIONS */
 
 /**
+ * Pre-processing to make user data available for all routes.
  * Check for JSON web token in req's cookies, and validate the token.
  * Create a UserReqData object indicating whether user is logged in,
  * or a guest (based on whether JWT is valid).
  * Put that UserReqData object into the response for later functions.
- * 
- * TODO: If JWT is valid EXCEPT that it's expired,
- * we must check for a valid refresh token in the cookie.
- * If valid refresh token exists, generate and deliver a new JWT.
- * Cookie will be added in post-processing based on previously explained logic.
- * 
- * TODO: This is deeply nested. Rewrite it to be more readable.
  */
 pub async fn login_status_middleware(
     req: ServiceRequest,
@@ -70,11 +64,14 @@ pub async fn login_status_middleware(
 }
 
 
+/**
+ * Post-processing middleware to catch a "make new JWT" flag,
+ * then make a new JWT and put it in a cookie in the response.
+ */
 pub async fn jwt_cookie_middleware<B>(
     req: ServiceRequest,
     next: Next<B>,
 ) -> Result<ServiceResponse<B>, Error> where B: MessageBody, {
-
     let mut res: ServiceResponse<B> = next.call(req).await?;
 
     let new_jwt: Option<String> = res
@@ -97,31 +94,12 @@ pub async fn jwt_cookie_middleware<B>(
     Ok(res)
 }
 
-// NOTE FOR LATER: HOW TO ADD A COOKIE WITH NEW JWT WHEN NEEDED (it will inevitable be needed!)
-
-/*
-
-    // Call the next service (route handler)
-    let mut res = next.call(req).await?;
-
-    // POST-PROCESSING!!!
-
-    // Create your cookie
-    let cookie = actix_web::cookie::Cookie::build("my_random_cookie", "cookie_value")
-        .http_only(true)
-        .secure(true)
-        .path("/")
-        .finish();
-
-    // Add the cookie to the response
-    res.response_mut().add_cookie(&cookie)?;
-
-    Ok(res)
 
 
-*/
-
-// This should return a result so we can return errors (now that it's getting simpler)
+/**
+ * Assists the login_status_middleware function by getting
+ * user data for request (UserReqData).
+ */
 async fn get_user_req_data_from_opt(
     option: Option<actix_web::cookie::Cookie<'_>>,
     req: &ServiceRequest,

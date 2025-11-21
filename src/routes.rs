@@ -217,10 +217,8 @@ struct RegisterTemplate<'a> {
 
 #[derive(Template)]
 #[template(path ="error.html")]
-struct ErrorTemplate<'a> {
-    title: &'a str,
-    message: &'a str,
-    code: &'a str,
+struct ErrorTemplate<> {
+    error_data: utils::ErrorData,
     logged_in: bool,
 }
 
@@ -746,18 +744,19 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
 }
 
 
-#[get("/error")]
-async fn error_page(req: HttpRequest) -> HttpResponse {
+#[get("/error/{code}")]
+async fn error_page(req: HttpRequest, path:web::Path<String>) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    let message: &str = "Welcome to your error";
-    let title: &str = "ERROR TITLE";
-    let code: &str = "500?";
+    let code_u16 = match path.into_inner().parse::<u16>() {
+        Ok(code) => code,
+        Err(_) => 400
+    };
 
-    let error_template: ErrorTemplate<'_> = ErrorTemplate {
-        message,
-        title,
-        code,
+    let error_data: utils::ErrorData = utils::ErrorData::new(code_u16);
+
+    let error_template: ErrorTemplate<> = ErrorTemplate {
+        error_data,
         logged_in: user_req_data.logged_in
     };
 
@@ -767,7 +766,22 @@ async fn error_page(req: HttpRequest) -> HttpResponse {
 }
 
 
-/** 
+#[get("/error")]
+async fn error_root() -> HttpResponse {
+    HttpResponse::Found()
+        .append_header(("Location", "/error/500"))
+        .finish()
+}
+
+
+#[get("/error/")]
+async fn error_root_2() -> HttpResponse {
+    HttpResponse::Found()
+        .append_header(("Location", "/error"))
+        .finish()
+}
+
+/*
  * 
  * 
  * 

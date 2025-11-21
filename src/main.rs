@@ -35,6 +35,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(from_fn(middleware::login_status_middleware))
             .service(routes::home)
             .service(routes::dashboard_page)
+            .service(routes::error_root)
+            .service(routes::error_root_2)
             .service(routes::error_page)
             .service(
                 web::scope("/auth")

@@ -1,6 +1,28 @@
-use regex::Regex;
+/* 
+ * ===============================
+ * ===============================
+ * =====                     =====
+ * =====  UTILS AND HELPERS  =====
+ * =====                     =====
+ * ===============================
+ * ===============================
+ */
 
-// INPUT VALIDATIONS
+
+
+ use regex::Regex;
+
+
+
+/* 
+ * ===============================
+ * ===============================
+ * =====                     =====
+ * =====  INPUT VALIDATIONS  =====
+ * =====                     =====
+ * ===============================
+ * ===============================
+ */
 
 struct StringRange {
     min: usize,
@@ -51,3 +73,100 @@ pub fn validate_real_name(name: &String) -> bool {
 
 // TO DO: Move this into RESOURCES file
 pub fn auth_client_id() -> String { String::from("auth_site") }
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * =============================
+ * =============================
+ * =====                   =====
+ * =====  ERROR CODE MAPS  =====
+ * =====                   =====
+ * =============================
+ * =============================
+ * 
+ * 
+ * 
+ * 
+ */
+
+pub struct ErrorData {
+    pub code: String,
+    pub title: String,
+    pub message: String,
+}
+
+impl ErrorData {
+    pub fn new(code: u16) -> Self {
+        match code {
+            400 => ErrorData {
+                code: code.to_string(),
+                title: "Bad Request".to_string(),
+                message: "The request was malformed or otherwise bad.".to_string(),
+            },
+            401 => ErrorData {
+                code: code.to_string(),
+                title: "Unauthorized".to_string(),
+                message: "User is not authenticated.".to_string(),
+            },
+            403 => ErrorData {
+                code: code.to_string(),
+                title: "Forbidden".to_string(),
+                message: "You do not have permission to view this page.".to_string(),
+            },
+            404 => ErrorData {
+                code: code.to_string(),
+                title: "Not Found".to_string(),
+                message: "The page you are looking for was not found.".to_string(),
+            },
+            408 => ErrorData {
+                code: code.to_string(),
+                title: "Request Timeout".to_string(),
+                message: "Server is shutting down connection.".to_string(),
+            },
+            409 => ErrorData {
+                code: code.to_string(),
+                title: "Conflict".to_string(),
+                message: "Unacceptable duplicate input.".to_string(),
+            },
+            422 => ErrorData {
+                code: code.to_string(),
+                title: "Unprocessable Content".to_string(),
+                message: "Request was well formed but content contains semantic errors.".to_string(),
+            },
+            429 => ErrorData {
+                code: code.to_string(),
+                title: "Too Many Requests".to_string(),
+                message: "User has sent too many requests.".to_string(),
+            },
+            500 => ErrorData {
+                code: code.to_string(),
+                title: "Internal Server Error".to_string(),
+                message: "An unexpected error occurred.".to_string(),
+            },
+            502 => ErrorData {
+                code: code.to_string(),
+                title: "Bad Gateway".to_string(),
+                message: "Gateway server received an invalid response.".to_string(),
+            },
+            503 => ErrorData {
+                code: code.to_string(),
+                title: "Service Unavailable".to_string(),
+                message: "Server is not ready to handle the request. Please check back later.".to_string(),
+            },
+            504 => ErrorData {
+                code: code.to_string(),
+                title: "Gateway Timeout".to_string(),
+                message: "Server did not respond in time.".to_string(),
+            },
+            _ => ErrorData {
+                code: code.to_string(),
+                title: "Unknown Error".to_string(),
+                message: "An unknown error has occurred.".to_string(),
+            },
+        }
+    }
+}
