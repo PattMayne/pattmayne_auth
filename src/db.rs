@@ -64,6 +64,43 @@ pub struct RefreshToken {
 }
 
 
+/* A container to satisfy sqlx's insatiable lust for structs.
+ * For when we need to get a list of all the client_ids from
+ * the client_sites table.
+*/
+struct ClientId {
+    pub client_id: String,
+}
+
+
+#[derive(serde::Serialize)]
+pub struct ClientSites {
+    id: i32,
+    client_id: String,
+    client_secret: String,
+    name: String,
+    domain: String,
+    logo_url: String,
+    is_active: i8, // actually a bool
+    scopes: String,
+    is_internal: i8, // actually a bool
+    created_timestamp: OffsetDateTime
+}
+
+impl ClientSites {
+    pub fn get_id(&self) -> i32 { self.id }
+    pub fn get_client_secret(&self) -> &String { &self.client_secret }
+    pub fn get_name(&self) -> &String { &self.name }
+    pub fn get_client_id(&self) -> &String { &self.client_id }
+    pub fn get_domain(&self) -> &String { &self.domain }
+    pub fn get_logo_url(&self) -> &String { &self.logo_url }
+    pub fn get_is_active(&self) -> bool { self.is_active == 1 }
+    pub fn get_scopes(&self) -> &String { &self.scopes }
+    pub fn get_is_internal(&self) -> bool { self.is_internal == 1 }
+    pub fn get_created_timestamp(&self) -> &OffsetDateTime { &self.created_timestamp }
+}
+
+
 impl RefreshToken {
     pub fn get_token(&self) -> &String { &self.token }
     pub fn get_client_id(&self) -> &String { &self.client_id }
@@ -190,6 +227,9 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
 }
 
 
+/**
+ * Get a refresh token for specified user and client site.
+ */
 pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option<RefreshToken>> {
     let pool: MySqlPool = create_pool().await?;
 
@@ -200,6 +240,24 @@ pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option
             FROM refresh_tokens WHERE user_id = ? AND client_id = ?",
         user_id, client_id
     ).fetch_optional(&pool).await?)
+}
+
+/**
+ * Get a collection of all the client_ids in the client_sites table.
+ */
+pub async fn get_all_client_ids() -> Result<Vec<String>> {
+    let pool: MySqlPool = create_pool().await?;
+    let client_id_structs: Vec<ClientId> = sqlx::query_as!(
+        ClientId,
+        "SELECT client_id FROM client_sites"
+    ).fetch_all(&pool).await?;
+
+    let client_ids: Vec<String> = client_id_structs.into_iter()
+        .map(|client_id_struct| {
+            return client_id_struct.client_id;
+        }).collect();
+
+    Ok(client_ids)
 }
 
 

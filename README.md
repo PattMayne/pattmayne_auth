@@ -18,6 +18,12 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Make tests, especially for error page.
  * Table in DB to store accepted sites (client sites)
  * Admin page for adding/removing client sites
+ * When a person tries to register on a site, but they're already registered on another, just log them in
+ * * This will create a refresh token for THAT site
+ * * I don't think they can auto-log in to ALL sites. They must log in to get the JWT cookie.
+ * * So each site will have its own expiry for refresh tokens.
+ * * BUT logging out of one will log out of all.
+ * * Maybe logging IN to one should extend the expiry of all? But only those that already exist.
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
