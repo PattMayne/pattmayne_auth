@@ -207,6 +207,16 @@ struct LoginTemplate<'a> {
 
 
 #[derive(Template)]
+#[template(path ="new_client_form_page.html")]
+struct NewClientTemplate<'a> {
+    logged_in: bool,
+    title: &'a str,
+    message: &'a str,
+}
+
+
+
+#[derive(Template)]
 #[template(path ="register.html")]
 struct RegisterTemplate<'a> {
     title: &'a str,
@@ -318,7 +328,6 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
             // get user object from DB
             match db::get_user_by_id(user_id).await {
                 Ok(Some(user)) => {
-                    println!("Retrieved the user that we just saved");
                     // User may now receive JWT and refresh token.
                     return give_user_auth_cookies(user).await;
                 },
@@ -356,7 +365,6 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 
     // Check for empty fields
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
-        println!("empty field(s)");
         return HttpResponse::Unauthorized().json(
             ErrorResponse {
             error: String::from("Invalid Credentials: Empty Field."),
@@ -378,7 +386,6 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
     // NOW we can do PATTERN MATCHING to return something
     match user_result {
         Ok(Some(user)) => {
-            println!("found a user");
 
             // Now check the password
             if db::verify_password(&info.password, user.get_password_hash()) {
@@ -585,8 +592,6 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
         None => 0
     };
 
-    println!("kenny loggin out user id: {}", user_id);
-
     let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
         .path("/")
         .max_age(time::Duration::seconds(0))
@@ -644,9 +649,6 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
 async fn home(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    // TEST PRINTING NOW but we will use this to display username later
-    println!("role: {}", user_req_data.role);
-
     // ORIGINAL CODE FOLLOWS
 
     let state_string: &str =
@@ -669,6 +671,12 @@ async fn home(req: HttpRequest) -> impl Responder {
 // if user just goes to /auth
 pub async fn auth_home() -> impl Responder {
     Redirect::to("/auth/login")
+}
+
+
+// if user just goes to /auth
+pub fn redirect_to_err(err_code: String) -> impl Responder {
+    Redirect::to(format!("/error/{}", err_code))
 }
 
 
@@ -707,7 +715,45 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
         .body(register_template.render().unwrap())
 }
 
+/**
+ * The page where an admin can enter information for a new client site.
+ * This is just the form. Another (post) function will receive the data
+ * submitted from this form and process it.
+ */
+pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
+    match user_req_data.id {
+        Some(_id) => {
+            match user_req_data.role.as_str() {
+                // make sure they're an admin
+                "admin" => {
+                    let new_client_template: NewClientTemplate = NewClientTemplate {
+                        title: "Add New Client Site",
+                        message: "Add a new client site to the network.",
+                        logged_in: user_req_data.logged_in
+                    };
+                    HttpResponse::Ok()
+                        .content_type("text/html")
+                        .body(new_client_template.render().unwrap())
+                },
+                _ => {
+                    // send to unauthorized error page
+                    redirect_to_err(String::from("403"))
+                        .respond_to(&req)
+                        .map_into_boxed_body()
+                }
+            }
+        },
+        None => send_to_login()
+    }
+
+}
+
+
+/**
+ * Main page for user account info.
+ * */
 #[get("/dashboard")]
 pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
@@ -740,7 +786,6 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
         },
         None => send_to_login()
     }
-
 }
 
 

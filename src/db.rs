@@ -296,8 +296,6 @@ pub async fn get_all_client_ids() -> Result<Vec<String>> {
         anyhow!("Could not create pool: {e}")
     })?;
 
-    println!("trying to add the refresh token");
-
     let expires_timestamp: OffsetDateTime =
         OffsetDateTime::now_utc() + Duration::days(14);
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
@@ -324,9 +322,6 @@ pub async fn get_all_client_ids() -> Result<Vec<String>> {
         eprintln!("Failed to save refresh_token to database: {:?}", e);
         anyhow!("Could not save refresh_token to database: {e}")
     })?;
-
-    let rows_affected = result.rows_affected();
-    println!("Rows affected: {}", rows_affected);
 
     Ok(result.rows_affected() as i32)
  }
@@ -514,7 +509,6 @@ pub async fn update_real_names(
     last_name: &String,
     id: i32
 )-> Result<i32, anyhow::Error> {
-    println!("called update_names database function");
      // map_err changes a possible error into the return type of error I return in the closure
     // This is simpler and more idiomatic than doing a match
     let pool: MySqlPool = create_pool().await.map_err(|e| {

@@ -1,0 +1,111 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }}</title>
+        <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+        <link rel="stylesheet" href="/static/css/foundation.css">
+        <link rel="stylesheet" href="/static/css/app.css?id=1">
+    </head>
+
+
+    <body>
+    {% include "header.html" %}
+
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 cell">
+                <h1>{{ title }}</h1>
+                    <p>{{ message }}</p>
+            </div>
+
+            <div class="large-12 cell">
+                <div class="callout">
+
+                    <div class="grid-x grid-padding-x">
+                        <div class="large-12 cell">
+                            <h4>{{ title }}</h4>
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                New Site Domain:
+                                <input id="site_domain" name="site_domain" type="text" />
+                            </label>
+
+                            <label>
+                                New Site Name (Public facing title):
+                                <input id="site_name" name="site_name" type="text" />
+                            </label>
+                            <label>
+                                Client ID (random unique public identifier):
+                                <input id="client_id" name="client_id" type="text" />
+                            </label>
+                            <label>
+                                Client Secret (for confidential clients):
+                                <input id="client_secret" name="client_secret" type="text" />
+                            </label>
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                Redirect URI:                                    
+                                <input id="redirect_uri" name="redirect_uri" type="text" />
+                            </label>
+
+                            <label>
+                                Logo URL:
+                                <input id="logo_url" name="logo_url" type="text" />
+                            </label>
+
+                            <label>
+                                Scopes (may leave blank for now):
+                                <input id="logo_url" name="logo_url" type="text" />
+                            </label>
+                            
+                            <label>
+                                Type:
+                                <select id="type" name="type">
+                                    <option value="confidential" selected>Confidential</option>
+                                    <option value="public">Public</option>
+                                    <option value="native">Native (mobile/desktop)</option>
+                                </select>
+                            </label>
+
+
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                Description (public facing):
+                                <textarea id="description" name="description" style="height: 200px;"></textarea>
+                            </label>
+
+                            <label>
+                                Is Active:
+                                <input type="checkbox" id="is_active" name="s_active" checked>
+                            </label>
+                        </div>
+                        <div class="large-12 cell">
+                            <a class="button small" onclick="submit_data()">SUBMIT</a>
+                        </div>
+                    </div>
+               </div>
+
+
+                <div class="callout primary" id="msg_box">
+                </div>
+
+            </div>
+        </div> <!-- end of grid-x -->
+
+    </div><!-- end of grid-container -->
+            
+
+        <script src="/static/js/vendor/jquery.js"></script>
+        <script src="/static/js/vendor/what-input.js"></script>
+        <script src="/static/js/vendor/foundation.js"></script>
+        <script type="module" src="/static/js/new_client_form.js"></script>
+    </body>
+
+
+</html>

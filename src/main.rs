@@ -49,6 +49,10 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::update_names)
                     .service(routes::update_password)
             )
+            .service(
+                web::scope("/admin")
+                    .route("/new_client", web::get().to(routes::new_client_site_form_page))
+            )
             .wrap(from_fn(middleware::jwt_cookie_middleware))
     })
     .bind(("127.0.0.1", 8080))?
@@ -72,7 +76,7 @@ async fn db_first_entries() {
             }            
         },
         Err(e) => {
-            println!("DB Error: {e}");
+            eprintln!("DB Error: {e}");
         }
     };
 

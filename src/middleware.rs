@@ -82,7 +82,6 @@ pub async fn jwt_cookie_middleware<B>(
 
     // After handler, check for the NewJwt flag and add cookie if present
     if let Some(token) = new_jwt {
-        println!("INSERTING NEW JWT COOKIE");
         let cookie: actix_web::cookie::Cookie<'_> =
             auth::build_token_cookie(
                 token,
@@ -165,7 +164,6 @@ async fn get_user_req_data_from_opt(
 
                 let new_jwt = new_jwt_rslt.unwrap();
                 req.extensions_mut().insert(NewJwtObj::new(new_jwt));
-                println!("getting new JWT");
                 return Ok(auth::UserReqData::new(Some(claims)));
             } else {
                 Ok(guest_data)

@@ -172,6 +172,10 @@ impl UserReqData {
             }
         }
     }
+
+    pub fn get_role(&self) -> &String {
+        &self.role
+    }
 }
 
 /* functions for the Claims struct */
