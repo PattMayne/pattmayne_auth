@@ -211,6 +211,16 @@ impl NewClientInputs {
         self.client_type = self.client_type.trim().to_string();
         self.description = self.description.trim().to_string();
     }
+
+    pub fn print_all_strings(&self) {
+        println!("client_id: {}", self.client_id);
+        println!("domain: {}", self.site_domain);
+        println!("site_name: {}", self.site_name);
+        println!("r_uri: {}", self.redirect_uri);
+        println!("logo_url: {}", self.logo_url);
+        println!("client_type: {}", self.client_type);
+        println!("desc: {}", self.description);
+    }
 }
 
 
@@ -445,27 +455,60 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 }
 
 
-#[post("/new_client")]
+#[post("/add_client")]
 async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse {
-    // MAKE SURE they are an admin
+    println!("Gonna try to add a NEW CLIENT SITE!!!! 11111");
+    // TO DO: MAKE SURE they are an admin
 
     // Trim every string
     inputs.trim_all_strings();
+    inputs.print_all_strings(); // delete
 
     // Make sure the required fields are not empty
     let domains_are_valid: bool =
         utils::validate_url(&inputs.redirect_uri) &&
         utils::validate_url(&inputs.site_domain);
     
+    if !domains_are_valid {
+        println!("domains are not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Invalid domain format"),
+                code: 406
+            })
+    }
+
+    // Check all the fields
+
     let client_id_is_valid: bool = utils::string_length_valid(
         utils::StringRange{ min: 2, max: 20 },
         &inputs.client_id
+    ) && utils::has_no_whitespace(
+        &inputs.client_id
     );
+
+    if !client_id_is_valid {
+        println!("CLIENT ID is not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Client ID must be 2 to 20 characters with no spaces"),
+                code: 406
+            });
+    }
 
     let name_is_valid: bool = utils::string_length_valid(
         utils::StringRange{ min: 2, max: 20 },
         &inputs.site_name
     );
+
+    if !name_is_valid {
+        println!("NAME is not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Site name must be 2 to 20 characters."),
+                code: 406
+            });
+    }
 
     // If string checks passed, enter into DB, generate secret, show admin secret
     if domains_are_valid && client_id_is_valid && name_is_valid {
@@ -484,9 +527,11 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
             is_active: inputs.is_active,
         };
 
+        println!("Gonna try to add a NEW CLIENT SITE!!!! 66666");
         let add_client_result: Result<u64, anyhow::Error> =
             db::add_external_client(client_data).await;
         
+        println!("Gonna try to add a NEW CLIENT SITE!!!! 77777");
         match add_client_result {
             Ok(rows_affected) => {
                 if rows_affected > 0 {
@@ -510,9 +555,12 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
 
         
     } else {
-        return return_internal_err_json();
+        HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Bad Inputs"),
+                code: 406
+            })
     }
-
 
 }
 /*

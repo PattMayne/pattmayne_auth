@@ -23,9 +23,13 @@ export const first_last_name_length_range = {
 
 /* Error messages for failed input valiadtion. */
 export const email_reqs_msg = "Must be a legitimate email address. Check your formatting."
-export const username_reqs_msg = "Username must be 6 to 16 characters. Only letters, numbers, underscore, and hyphen allowed."
+export const username_reqs_msg = "Username must be 6 to 16 characters. " +
+    "Only letters, numbers, underscore, and hyphen allowed."
 export const password_reqs_msg = "Password must be 6 to 16 characters with no spaces."
 export const name_range_err_msg = "Names must be 2 to 50 characters in length"
+
+export const new_client_req_fields_msg = "Site domain, name, auth_id, redirect_uri, " +
+    "and type must not be empty. Also, redirect_uri and domain must be valid."
 
 // Make sure password matches regex and length requirements
 export const check_password = (password, err_msgs) => {

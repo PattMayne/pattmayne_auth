@@ -14,38 +14,76 @@ const submit_data = async () => {
     msgs = []
 
     console.log("SUBMITTING DATA")
+    hide_msg_box()
 
-    msgs.push("you pressed up a button buddy")
-    show_msg_box()
+    // Gather data 
+    const site_domain = document.getElementById("site_domain").value.trim()
+    const site_name = document.getElementById("site_name").value.trim()
+    const client_id = document.getElementById("client_id").value.trim()
+    const redirect_uri = document.getElementById("redirect_uri").value.trim()
+    const description = document.getElementById("description").value.trim()
+    const logo_url = document.getElementById("logo_url").value.trim()
+    const client_type = document.getElementById("client_type").value.trim()
+    const is_active = document.getElementById("is_active").checked
 
-    /*  KEEPING THE FETCH STUFF IN COMMENTS FOR LATER ADAPTATION
+    // make sure required fields are not empty
+    let required_fields_are_filled =
+        site_domain != "" &&
+        site_name != "" &&
+        client_id != "" &&
+        redirect_uri != "" &&
+        client_type != ""
+
+    if (!required_fields_are_filled) {
+        console.log("Error with input data")
+        msgs.push(utils.new_client_req_fields_msg())
+        show_msg_box()
+        return
+    }
+
+    const client_data = {
+        site_domain: site_domain,
+        site_name: site_name,
+        client_id: client_id,
+        redirect_uri: redirect_uri,
+        logo_url: logo_url,
+        description: description,
+        client_type: client_type,
+        is_active: is_active
+    };
+
+    /*  KEEPING THE FETCH STUFF IN COMMENTS FOR LATER ADAPTATION */
 
     // now send it to the login route
-    const route = "/auth/login"
+    const route = "/admin/add_client"
 
-    await utils.fetch_json_post(route, creds)
+    await utils.fetch_json_post(route, client_data)
         .then(response => {
             if(!response.ok) {
                 response.json().then(data => {
                     let msg = (!!data.code) ? (data.code.toString() + " ") : ""
                     msg += (!!data.error) ? data.error : " Error occurred"
-                    err_msgs.push(msg)
-                    show_err_box()
+                    msgs.push(msg)
+                    show_msg_box()
                 })
 
-                throw new Error("User not found or server error.")
+                throw new Error("Could not add client site, or server error.")
             }
             return response.json()
-        }).then(user => {
-            console.log("User data: ", user)
-            if(!!user.user_id){
-                window.location.href = "/dashboard";
+        }).then(secret_data => {
+            console.log("secret_data: ", secret_data.raw_client_secret)
+            if(!!secret_data.raw_client_secret){
+                const secret_message = "Here is the CLIENT_SECRET for the new domain. " +
+                    "We will never show this again, so COPY IT NOW and put it in " +
+                    "the environment variables of the new client site."
+                msgs.push(secret_message)
+                msgs.push(secret_data.raw_client_secret)
+                show_msg_box()
             }
             
         }).catch(error => {
             console.log('Error: ', error)
         })
-            */
 }
 
 

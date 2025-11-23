@@ -52,6 +52,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/admin")
                     .route("/new_client", web::get().to(routes::new_client_site_form_page))
+                    .service(routes::new_client_post)
             )
             .wrap(from_fn(middleware::jwt_cookie_middleware))
     })

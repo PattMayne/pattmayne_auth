@@ -498,6 +498,8 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
  * exists as a client_site in the DB.
  */
 pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, anyhow::Error> {
+
+    println!("In the DB to add a NEW CLIENT SITE!!!!!");
     let pool: MySqlPool = create_pool().await.map_err(|e| {
         eprintln!("Failed to create pool: {:?}", e);
         anyhow!("Could not create pool: {e}")
@@ -513,7 +515,7 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
             domain,
             redirect_uri,
             logo_url,
-            type,
+            client_type,
             description,
             is_internal,
             is_active
