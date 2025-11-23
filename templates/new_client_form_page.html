@@ -38,14 +38,12 @@
                                 New Site Name (Public facing title):
                                 <input id="site_name" name="site_name" type="text" />
                             </label>
+
                             <label>
                                 Client ID (random unique public identifier):
                                 <input id="client_id" name="client_id" type="text" />
                             </label>
-                            <label>
-                                Client Secret (for confidential clients):
-                                <input id="client_secret" name="client_secret" type="text" />
-                            </label>
+
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
@@ -57,15 +55,10 @@
                                 Logo URL:
                                 <input id="logo_url" name="logo_url" type="text" />
                             </label>
-
-                            <label>
-                                Scopes (may leave blank for now):
-                                <input id="logo_url" name="logo_url" type="text" />
-                            </label>
                             
                             <label>
                                 Type:
-                                <select id="type" name="type">
+                                <select id="client_type" name="client_type">
                                     <option value="confidential" selected>Confidential</option>
                                     <option value="public">Public</option>
                                     <option value="native">Native (mobile/desktop)</option>
@@ -82,7 +75,7 @@
 
                             <label>
                                 Is Active:
-                                <input type="checkbox" id="is_active" name="s_active" checked>
+                                <input type="checkbox" id="is_active" name="is_active" checked>
                             </label>
                         </div>
                         <div class="large-12 cell">

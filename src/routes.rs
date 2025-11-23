@@ -73,6 +73,11 @@ struct BadNames {
 
 
 #[derive(Serialize)]
+struct RawClientSecret {
+    raw_client_secret: String,
+}
+
+#[derive(Serialize)]
 struct BadPassword {
     password_valid: bool,
     code: u16,
@@ -182,6 +187,30 @@ struct RealNames {
 #[derive(Deserialize)]
 struct NewPassword {
     pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct NewClientInputs {
+    pub site_domain: String,
+    pub site_name: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub logo_url: String,
+    pub description: String,
+    pub client_type: String,
+    pub is_active: bool,
+}
+
+impl NewClientInputs {
+    pub fn trim_all_strings(&mut self) {
+        self.client_id = self.client_id.trim().to_string();
+        self.site_domain = self.site_domain.trim().to_string();
+        self.site_name = self.site_name.trim().to_string();
+        self.redirect_uri = self.redirect_uri.trim().to_string();
+        self.logo_url = self.logo_url.trim().to_string();
+        self.client_type = self.client_type.trim().to_string();
+        self.description = self.description.trim().to_string();
+    }
 }
 
 
@@ -414,6 +443,88 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
         }
     }
 }
+
+
+#[post("/new_client")]
+async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse {
+    // MAKE SURE they are an admin
+
+    // Trim every string
+    inputs.trim_all_strings();
+
+    // Make sure the required fields are not empty
+    let domains_are_valid: bool =
+        utils::validate_url(&inputs.redirect_uri) &&
+        utils::validate_url(&inputs.site_domain);
+    
+    let client_id_is_valid: bool = utils::string_length_valid(
+        utils::StringRange{ min: 2, max: 20 },
+        &inputs.client_id
+    );
+
+    let name_is_valid: bool = utils::string_length_valid(
+        utils::StringRange{ min: 2, max: 20 },
+        &inputs.site_name
+    );
+
+    // If string checks passed, enter into DB, generate secret, show admin secret
+    if domains_are_valid && client_id_is_valid && name_is_valid {
+        let raw_client_secret: String = utils::generate_client_secret();
+        let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
+
+        let client_data: db::NewClientData = db::NewClientData {
+            site_domain: inputs.site_domain.to_owned(),
+            site_name: inputs.site_name.to_owned(),
+            hashed_client_secret: hashed_secret.to_owned(),
+            client_id: inputs.client_id.to_owned(),
+            redirect_uri: inputs.redirect_uri.to_owned(),
+            logo_url: inputs.logo_url.to_owned(),
+            description: inputs.description.to_owned(),
+            client_type: inputs.client_type.to_owned(),
+            is_active: inputs.is_active,
+        };
+
+        let add_client_result: Result<u64, anyhow::Error> =
+            db::add_external_client(client_data).await;
+        
+        match add_client_result {
+            Ok(rows_affected) => {
+                if rows_affected > 0 {
+                    // We added it to the DB. Send the admin their raw secret.
+                    let raw_client_secret_json: RawClientSecret = RawClientSecret {
+                        raw_client_secret
+                    };
+
+                    return HttpResponse::Ok()
+                        .json(raw_client_secret_json);
+                } else {
+                    return return_internal_err_json();
+                }
+
+            },
+            Err(e) => {
+                eprintln!("Error: {e}");
+                return_internal_err_json()
+            }
+        }
+
+        
+    } else {
+        return return_internal_err_json();
+    }
+
+
+}
+/*
+    pub site_domain: String,
+    pub site_name: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub logo_url: String,
+    pub description: String,
+    pub is_active: bool,
+*/
+
 
 
 /**

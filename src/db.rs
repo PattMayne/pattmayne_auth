@@ -63,6 +63,18 @@ pub struct RefreshToken {
     expires_timestamp: OffsetDateTime
 }
 
+pub struct NewClientData {
+    pub site_domain: String,
+    pub site_name: String,
+    pub hashed_client_secret: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub logo_url: String,
+    pub description: String,
+    pub client_type: String,
+    pub is_active: bool,
+}
+
 
 /* A container to satisfy sqlx's insatiable lust for structs.
  * For when we need to get a list of all the client_ids from
@@ -456,15 +468,15 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
 
 
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-            "INSERT INTO client_sites (
-                client_id,
-                client_secret,
-                name,
-                domain,
-                redirect_uri,
-                type,
-                is_internal)
-            VALUES (?, ?, ?, ?, ?, ?, ?)")
+    "INSERT INTO client_sites (
+            client_id,
+            hashed_client_secret,
+            name,
+            domain,
+            redirect_uri,
+            client_type,
+            is_internal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(client_id)
         .bind(client_secret)
         .bind(name)
@@ -477,10 +489,52 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
             anyhow!("Could not save FIRST ADMIN user to database: {e}")
         })?;
 
-    let new_rows_count: u64 = result.rows_affected();
-    Ok(new_rows_count > 0)
+    Ok(result.rows_affected() > 0)
 }
 
+
+/**
+ * When the server starts up we make sure the auth site (this site)
+ * exists as a client_site in the DB.
+ */
+pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    // We trust that the data has already been checked. We simply enter it like obedient robots now.
+    // Except that we will turn the bool into an int.
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+    "INSERT INTO client_sites (
+            client_id,
+            hashed_client_secret,
+            name,
+            domain,
+            redirect_uri,
+            logo_url,
+            type,
+            description,
+            is_internal,
+            is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(new_client_data.client_id)
+        .bind(new_client_data.hashed_client_secret)
+        .bind(new_client_data.site_name)
+        .bind(new_client_data.site_domain)
+        .bind(new_client_data.redirect_uri)
+        .bind(new_client_data.logo_url)
+        .bind(new_client_data.client_type)
+        .bind(new_client_data.description)
+        .bind(0)
+        .bind(new_client_data.is_active)
+        .execute(&pool).await.map_err(|e| {
+            eprintln!("Failed to save EXTERNAL CLIENT to database: {:?}", e);
+            anyhow!("Could not save EXTERNAL CLIENT to database: {e}")
+        })?;
+    
+    Ok(result.rows_affected())
+}
 
 /* 
  * 
