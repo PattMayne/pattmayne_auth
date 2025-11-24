@@ -239,7 +239,23 @@ impl NewClientInputs {
 }
 
 
-/*  ASKAMA HTML TEMPLATES   */
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ===================================
+ * ===================================
+ * =====                         =====
+ * =====  ASKAMA HTML TEMPLATES  =====
+ * =====                         =====
+ * ===================================
+ * ===================================
+ * 
+ * 
+ * 
+ * 
+ */
 
 
 #[derive(Template)]
@@ -247,7 +263,7 @@ impl NewClientInputs {
 struct HomeTemplate<'a> {
     title: &'a str,
     message: &'a str,
-    logged_in: bool,
+    user: auth::UserReqData,
 }
 
 
@@ -256,14 +272,14 @@ struct HomeTemplate<'a> {
 struct LoginTemplate<'a> {
     title: &'a str,
     message: &'a str,
-    logged_in: bool,
+    user: auth::UserReqData,
 }
 
 
 #[derive(Template)]
 #[template(path ="new_client_form_page.html")]
 struct NewClientTemplate<'a> {
-    logged_in: bool,
+    user: auth::UserReqData,
     title: &'a str,
     message: &'a str,
 }
@@ -275,7 +291,7 @@ struct NewClientTemplate<'a> {
 struct RegisterTemplate<'a> {
     title: &'a str,
     message: &'a str,
-    logged_in: bool,
+    user: auth::UserReqData,
 }
 
 
@@ -283,7 +299,7 @@ struct RegisterTemplate<'a> {
 #[template(path ="error.html")]
 struct ErrorTemplate<> {
     error_data: utils::ErrorData,
-    logged_in: bool,
+    user: auth::UserReqData,
 }
 
 
@@ -292,7 +308,7 @@ struct ErrorTemplate<> {
 struct DashboardTemplate<'a> {
     title: &'a str,
     user_data: &'a db::User,
-    logged_in: bool,
+    user: auth::UserReqData,
 }
 
 
@@ -843,7 +859,7 @@ async fn home(req: HttpRequest) -> impl Responder {
     let home_template: HomeTemplate<'_> = HomeTemplate {
         message: state_string,
         title: title,
-        logged_in: user_req_data.logged_in
+        user: user_req_data
     };
 
     HttpResponse::Ok()
@@ -873,7 +889,7 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
     let login_template = LoginTemplate {
         message: state_string,
         title: title,
-        logged_in: user_req_data.logged_in
+        user: user_req_data
     };
 
     HttpResponse::Ok()
@@ -891,7 +907,7 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
 
     let register_template: RegisterTemplate<'_> = RegisterTemplate {
         message: state_string,title: title,
-        logged_in: user_req_data.logged_in
+        user: user_req_data
     };
 
     HttpResponse::Ok()
@@ -915,7 +931,7 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
                     let new_client_template: NewClientTemplate = NewClientTemplate {
                         title: "Add New Client Site",
                         message: "Add a new client site to the network.",
-                        logged_in: user_req_data.logged_in
+                        user: user_req_data
                     };
                     HttpResponse::Ok()
                         .content_type("text/html")
@@ -950,7 +966,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                     let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
                         user_data: &user,
                         title,
-                        logged_in: user_req_data.logged_in
+        user: user_req_data
                     };
 
                     return HttpResponse::Ok()
@@ -986,7 +1002,7 @@ async fn error_page(req: HttpRequest, path:web::Path<String>) -> HttpResponse {
 
     let error_template: ErrorTemplate<> = ErrorTemplate {
         error_data,
-        logged_in: user_req_data.logged_in
+        user: user_req_data
     };
 
     HttpResponse::Ok()

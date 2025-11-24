@@ -2,7 +2,7 @@
     <div class="top-bar-right">
         <ul class="menu">
             <li><a href="/" class="button small nav-button">HOME</a></li>
-            {% if logged_in %}
+            {% if user.logged_in %}
                 <li><a href="/dashboard" class="button small nav-button">DASHBOARD</a></li>
                 <li><a class="button small nav-button" id="logout_nav_button">
                     LOGOUT
@@ -13,6 +13,11 @@
                 </a></li>
                 <li><a href="/auth/register" class="button small nav-button" id="register_nav_button">
                     REGISTER
+                </a></li>
+            {% endif %}
+            {% if user.role == "admin" %}
+                <li><a href="/admin/new_client" class="button small nav-button" id="admin_nav_button">
+                    ADMIN
                 </a></li>
             {% endif %}
         </ul> 
