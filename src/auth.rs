@@ -176,6 +176,10 @@ impl UserReqData {
     pub fn get_role(&self) -> &String {
         &self.role
     }
+
+    pub fn is_admin(&self) -> bool {
+        &self.role == "admin"
+    }
 }
 
 /* functions for the Claims struct */

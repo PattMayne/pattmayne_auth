@@ -57,6 +57,12 @@ struct ErrorResponse {
 }
 
 #[derive(Serialize)]
+struct SendToError {
+    send_to_error_page: bool,
+    code: u16,
+}
+
+#[derive(Serialize)]
 struct BadRegistrationInputs {
     email_valid: bool,
     username_valid: bool,
@@ -131,6 +137,15 @@ impl BadPassword {
         BadPassword {
             code,
             password_valid: false,
+        }
+    }
+}
+
+impl SendToError {
+    pub fn new(code: u16) -> Self {
+        SendToError {
+            code,
+            send_to_error_page: true,
         }
     }
 }
@@ -455,14 +470,30 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 }
 
 
+/**
+ * The post route for adding new CLIENT SITE to the database.
+ * Checks that the user is truly an admin, checks that all the 
+ * data is legit, then adds it to the database.
+ * Lots of opportunities to send errors.
+ */
 #[post("/add_client")]
-async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse {
-    println!("Gonna try to add a NEW CLIENT SITE!!!! 11111");
-    // TO DO: MAKE SURE they are an admin
+async fn new_client_post(
+    req: HttpRequest,
+    mut inputs: web::Json<NewClientInputs>
+) -> HttpResponse {
+    // MAKE SURE they are an admin
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+    if !user_req_data.is_admin() {
+        // tell front-end to redirect to error page
+        return HttpResponse::build(StatusCode::FORBIDDEN)
+            .json(ErrorResponse{
+                error: String::from("FORBIDDEN"),
+                code: 403
+            })
+    }
 
     // Trim every string
     inputs.trim_all_strings();
-    inputs.print_all_strings(); // delete
 
     // Make sure the required fields are not empty
     let domains_are_valid: bool =
@@ -478,7 +509,7 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
             })
     }
 
-    // Check all the fields
+    // Check all the fields.
 
     let client_id_is_valid: bool = utils::string_length_valid(
         utils::StringRange{ min: 2, max: 20 },
@@ -527,11 +558,9 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
             is_active: inputs.is_active,
         };
 
-        println!("Gonna try to add a NEW CLIENT SITE!!!! 66666");
         let add_client_result: Result<u64, anyhow::Error> =
             db::add_external_client(client_data).await;
         
-        println!("Gonna try to add a NEW CLIENT SITE!!!! 77777");
         match add_client_result {
             Ok(rows_affected) => {
                 if rows_affected > 0 {
@@ -548,8 +577,13 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
 
             },
             Err(e) => {
+                // Database error
                 eprintln!("Error: {e}");
-                return_internal_err_json()
+                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+                    .json(ErrorResponse{
+                        error: format!("Error: {e}"),
+                        code: 500
+                    })
             }
         }
 
@@ -563,15 +597,6 @@ async fn new_client_post(mut inputs: web::Json<NewClientInputs>) -> HttpResponse
     }
 
 }
-/*
-    pub site_domain: String,
-    pub site_name: String,
-    pub client_id: String,
-    pub redirect_uri: String,
-    pub logo_url: String,
-    pub description: String,
-    pub is_active: bool,
-*/
 
 
 

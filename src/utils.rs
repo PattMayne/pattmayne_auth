@@ -31,7 +31,7 @@ pub struct StringRange {
 }
 
 fn username_length_range() -> StringRange {
-    StringRange{ min: 6, max: 16 }
+    StringRange{ min: 6, max: 20 }
 }
 
 fn password_length_range() -> StringRange {

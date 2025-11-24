@@ -61,10 +61,15 @@ const submit_data = async () => {
         .then(response => {
             if(!response.ok) {
                 response.json().then(data => {
-                    let msg = (!!data.code) ? (data.code.toString() + " ") : ""
-                    msg += (!!data.error) ? data.error : " Error occurred"
-                    msgs.push(msg)
-                    show_msg_box()
+                    if (!!data.code && data.code == 403 || data.code == 401) {
+                        const redirect_uri = "/error/" + data.code;
+                        window.location.href = redirect_uri;
+                    } else {
+                        let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                        msg += (!!data.error) ? data.error : " Error occurred"
+                        msgs.push(msg)
+                        show_msg_box()
+                    }
                 })
 
                 throw new Error("Could not add client site, or server error.")
