@@ -36,7 +36,7 @@ const submit_data = async () => {
 
     if (!required_fields_are_filled) {
         console.log("Error with input data")
-        msgs.push(utils.new_client_req_fields_msg())
+        msgs.push(utils.new_client_req_fields_msg)
         show_msg_box()
         return
     }

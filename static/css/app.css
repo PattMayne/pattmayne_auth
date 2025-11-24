@@ -1,7 +1,7 @@
+/*  REMEMBER only to edit the SCSS file  */
 /* RAW COLORS */
 /* darker green */
-/* COLOR SCHEME */
-/*
+/* COLOR SCHEME 
         https://coolors.co/423841-2e5c8a-d6d6d6-248232-c97c18
 */
 /* CUSTOM FONTS */
@@ -80,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .button:hover, .button:focus {
-  background-color: #1A6025;
+  background-color: #111111;
   color: #f0f0f0;
 }
 
