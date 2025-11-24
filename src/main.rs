@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/login", web::get().to(routes::login_page))
                     .route("/register", web::get().to(routes::register_page))
                     .route("/", web::get().to(routes::auth_home))
+                    .route("", web::get().to(routes::auth_home))
                     .service(routes::login_post)
                     .service(routes::register_post)
                     .service(routes::logout_post)
@@ -51,16 +52,19 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/admin")
+                    .route("/", web::get().to(routes::admin_redirect))
+                    .route("", web::get().to(routes::admin_redirect))
+                    .route("/dashboard", web::get().to(routes::admin_home))
                     .route("/new_client", web::get().to(routes::new_client_site_form_page))
                     .service(routes::new_client_post)
             )
+            .default_service(web::get().to(routes::not_found)) // <- catch-all
             .wrap(from_fn(middleware::jwt_cookie_middleware))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
 }
-
 
 /**
  * When the server first starts, make sure admin exists in users.

@@ -1,0 +1,55 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }}</title>
+        <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+        <link rel="stylesheet" href="/static/css/foundation.css">
+        <link rel="stylesheet" href="/static/css/app.css">
+    </head>
+
+
+    <body>
+    {% include "header.html" %}
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 cell">
+                <h1>{{ title }}</h1>
+                <p>
+                    This will be the main page for Pattmayne Games.
+                </p>
+            </div>
+
+            <div class="large-12 cell">
+                <div class="callout">
+                    <p>
+                        {{ message }}
+                    </p>
+                </div>
+
+                <div class="callout primary">
+                    <h4>ADMIN ACTIONS</h4>
+                    <a href="/admin/new_client" class="button small">ADD NEW CLIENT</a>
+                    <h6>Existing Clients</h6>
+                    <p><i>...list of clients will go here...</i> we will send in a vec of client objs... ids and names... and a page to edit them all</p>
+                </div>
+
+                <!-- message box -->
+                <div class="callout primary" id="msg_box"></div>
+
+            </div>
+        </div> <!-- end of grid-x -->
+
+    </div><!-- end of grid-container -->
+            
+
+        <script src="/static/js/vendor/jquery.js"></script>
+        <script src="/static/js/vendor/what-input.js"></script>
+        <script src="/static/js/vendor/foundation.js"></script>
+        <script type="module" src="/static/js/admin_page.js"></script>
+    </body>
+
+
+</html>

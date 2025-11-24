@@ -115,6 +115,7 @@ async fn get_user_req_data_from_opt(
             Ok(auth::UserReqData::new(Some(claims)))
         },
         auth::JwtVerification::Expired(claims) => {
+            println!("JWT expired. will check refresh token and generate new JWT");
             // JWT is expired but otherwise valid.
             // set an object in the req to send a new cookie
             /* 

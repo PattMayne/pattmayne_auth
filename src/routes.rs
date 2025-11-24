@@ -275,6 +275,14 @@ struct LoginTemplate<'a> {
     user: auth::UserReqData,
 }
 
+#[derive(Template)]
+#[template(path ="admin_page.html")]
+struct AdminTemplate<'a> {
+    title: &'a str,
+    message: &'a str,
+    user: auth::UserReqData,
+}
+
 
 #[derive(Template)]
 #[template(path ="new_client_form_page.html")]
@@ -868,7 +876,7 @@ async fn home(req: HttpRequest) -> impl Responder {
  }
 
 
-// if user just goes to /auth
+// if user just goes to /auth or /auth/
 pub async fn auth_home() -> impl Responder {
     Redirect::to("/auth/login")
 }
@@ -915,6 +923,44 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
         .body(register_template.render().unwrap())
 }
 
+
+/**
+ * Main admin dashboard
+ * if user just goes to /auth
+ */
+pub async fn admin_home(req: HttpRequest) -> impl Responder {
+    println!("ADMIN HOME");
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+
+        match user_req_data.id {
+        Some(_id) =>
+            // make sure they're admin (basically a ternary)
+            if user_req_data.is_admin() {
+                let title: &str = "ADMIN DASHBOARD";
+                let admin_template: AdminTemplate = AdminTemplate {
+                    title,
+                    message: "Perform admin actions.",
+                    user: user_req_data
+                };
+                HttpResponse::Ok()
+                    .content_type("text/html")
+                    .body(admin_template.render().unwrap())
+
+            } else {                                        // send to unauthorized error page
+                redirect_to_err(String::from("403"))
+                    .respond_to(&req)
+                    .map_into_boxed_body()
+            },
+        None => send_to_login()
+    }    
+}
+
+pub async fn admin_redirect(req: HttpRequest) -> impl Responder {
+    Redirect::to("/admin/dashboard")
+}
+
+
+
 /**
  * The page where an admin can enter information for a new client site.
  * This is just the form. Another (post) function will receive the data
@@ -924,27 +970,23 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     match user_req_data.id {
-        Some(_id) => {
-            match user_req_data.role.as_str() {
-                // make sure they're an admin
-                "admin" => {
-                    let new_client_template: NewClientTemplate = NewClientTemplate {
-                        title: "Add New Client Site",
-                        message: "Add a new client site to the network.",
-                        user: user_req_data
-                    };
-                    HttpResponse::Ok()
-                        .content_type("text/html")
-                        .body(new_client_template.render().unwrap())
-                },
-                _ => {
-                    // send to unauthorized error page
-                    redirect_to_err(String::from("403"))
-                        .respond_to(&req)
-                        .map_into_boxed_body()
-                }
-            }
-        },
+        Some(_id) => 
+            // make sure they're admin (basically a ternary)
+            if user_req_data.is_admin() {
+                let new_client_template: NewClientTemplate = NewClientTemplate {
+                    title: "Add New Client Site",
+                    message: "Add a new client site to the network.",
+                    user: user_req_data
+                };
+                HttpResponse::Ok()
+                    .content_type("text/html")
+                    .body(new_client_template.render().unwrap())
+            } else {
+                // send to unauthorized error page
+                redirect_to_err(String::from("403"))
+                    .respond_to(&req)
+                    .map_into_boxed_body()
+            },
         None => send_to_login()
     }
 
@@ -966,7 +1008,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                     let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
                         user_data: &user,
                         title,
-        user: user_req_data
+                        user: user_req_data
                     };
 
                     return HttpResponse::Ok()
@@ -986,6 +1028,11 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
         },
         None => send_to_login()
     }
+}
+
+
+pub async fn not_found() -> impl Responder {
+    Redirect::to("/error/404")
 }
 
 
