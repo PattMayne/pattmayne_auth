@@ -590,26 +590,25 @@ async fn new_client_post(
         let client_data: db::NewClientData = db::NewClientData {
             site_domain: inputs.site_domain.to_owned(),
             site_name: inputs.site_name.to_owned(),
-            hashed_client_secret: hashed_secret.to_owned(),
             client_id: inputs.client_id.to_owned(),
             redirect_uri: inputs.redirect_uri.to_owned(),
+            hashed_client_secret: hashed_secret.to_owned(),
             logo_url: inputs.logo_url.to_owned(),
             description: inputs.description.to_owned(),
             client_type: inputs.client_type.to_owned(),
             is_active: inputs.is_active,
         };
 
-        let add_client_result: Result<u64, anyhow::Error> =
+        let update_client_result: Result<u64, anyhow::Error> =
             db::add_external_client(client_data).await;
         
-        match add_client_result {
+        match update_client_result {
             Ok(rows_affected) => {
                 if rows_affected > 0 {
                     // We added it to the DB. Send the admin their raw secret.
                     let raw_client_secret_json: RawClientSecret = RawClientSecret {
                         raw_client_secret
                     };
-
                     return HttpResponse::Ok()
                         .json(raw_client_secret_json);
                 } else {
@@ -651,11 +650,117 @@ async fn update_client_post(
     mut inputs: web::Json<ClientInputs>
 ) -> HttpResponse {
     println!("UPDATING CLIENT");
-    return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
-        .json(ErrorResponse{
-            error: String::from("PLACEHOLDER."),
-            code: 406
-        });
+
+
+    // MAKE SURE they are an admin
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+    if !user_req_data.is_admin() {
+        // tell front-end to redirect to error page
+        return HttpResponse::build(StatusCode::FORBIDDEN)
+            .json(ErrorResponse{
+                error: String::from("FORBIDDEN"),
+                code: 403
+            })
+    }
+
+    // Trim every string
+    inputs.trim_all_strings();
+
+    // Make sure the required fields are not empty
+    let domains_are_valid: bool =
+        utils::validate_url(&inputs.redirect_uri) &&
+        utils::validate_url(&inputs.site_domain);
+    
+    if !domains_are_valid {
+        println!("domains are not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Invalid domain format"),
+                code: 406
+            })
+    }
+
+    // Check all the fields.
+
+    let client_id_is_valid: bool = utils::string_length_valid(
+        utils::StringRange{ min: 2, max: 20 },
+        &inputs.client_id
+    ) && utils::has_no_whitespace(
+        &inputs.client_id
+    );
+
+    if !client_id_is_valid {
+        println!("CLIENT ID is not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Client ID must be 2 to 20 characters with no spaces"),
+                code: 406
+            });
+    }
+
+    let name_is_valid: bool = utils::string_length_valid(
+        utils::StringRange{ min: 2, max: 20 },
+        &inputs.site_name
+    );
+
+    if !name_is_valid {
+        println!("NAME is not valid");
+        return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Site name must be 2 to 20 characters."),
+                code: 406
+            });
+    }
+
+    // If string checks passed, enter into DB, generate secret, show admin secret
+    if domains_are_valid && client_id_is_valid && name_is_valid {
+        let raw_client_secret: String = utils::generate_client_secret();
+        let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
+
+        let client_data: db::UpdateClientData = db::UpdateClientData {
+            site_domain: inputs.site_domain.to_owned(),
+            site_name: inputs.site_name.to_owned(),
+            client_id: inputs.client_id.to_owned(),
+            redirect_uri: inputs.redirect_uri.to_owned(),
+            logo_url: inputs.logo_url.to_owned(),
+            description: inputs.description.to_owned(),
+            client_type: inputs.client_type.to_owned(),
+            is_active: inputs.is_active,
+        };
+
+    
+        let update_client_result: Result<u64, anyhow::Error> =
+            db::update_external_client(client_data).await;
+        
+        match update_client_result {
+            Ok(rows_affected) => {
+                if rows_affected > 0 {
+                    let update_data: UpdateData = UpdateData::new(true);
+
+                    HttpResponse::Ok()
+                        .json(update_data)
+                } else {
+                    return_internal_err_json()
+                }
+
+            },
+            Err(e) => {
+                // Database error
+                eprintln!("Error: {e}");
+                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+                    .json(ErrorResponse{
+                        error: format!("Error: {e}"),
+                        code: 500
+                    })
+            }
+        }
+    } else {
+        HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+            .json(ErrorResponse{
+                error: String::from("Bad Inputs"),
+                code: 406
+            })
+    }
 }
 
 
@@ -737,8 +842,6 @@ pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPasswo
             match db::get_user_by_id(id).await {
                 Ok(Some(_user)) =>{
                     // User is real user
-                    // get password from password_obj
-                    // check password for length. Send back if too long or short
 
                     // check credentials against regex and size ranges
                     let password_valid: bool = utils::validate_password(&password_obj.password);

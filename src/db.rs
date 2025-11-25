@@ -63,6 +63,23 @@ pub struct RefreshToken {
     expires_timestamp: OffsetDateTime
 }
 
+
+pub struct UpdateClientData {
+    pub site_domain: String,
+    pub site_name: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub logo_url: String,
+    pub description: String,
+    pub client_type: String,
+    pub is_active: bool,
+}
+
+pub struct UpdateClientSecret {
+    pub hashed_client_secret: String,
+}
+
+
 pub struct NewClientData {
     pub site_domain: String,
     pub site_name: String,
@@ -527,6 +544,11 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
     Ok(result.rows_affected() > 0)
 }
 
+
+pub async fn update_external_client(update_client_data: UpdateClientData) -> Result<u64, anyhow::Error> {
+    println!("Updating client in the database.");
+    Ok(100)
+}
 
 /**
  * When the server starts up we make sure the auth site (this site)

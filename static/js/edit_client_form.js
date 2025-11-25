@@ -75,20 +75,13 @@ const submit_data = async () => {
                 throw new Error("Could not add client site, or server error.")
             }
             return response.json()
-        }).then(secret_data => {
-            console.log("secret_data: ", secret_data.raw_client_secret)
-            if(!!secret_data.raw_client_secret){
-                const secret_message = "Here is the CLIENT_SECRET for the new domain. " +
-                    "We will never show this again, so COPY IT NOW and put it in " +
-                    "the environment variables of the new client site."
-                msgs.push(secret_message)
-                msgs.push(secret_data.raw_client_secret)
-                show_msg_box()
-            }
-            
-        }).catch(error => {
-            console.log('Error: ', error)
-        })
+    }).then(data => {
+        const message = !!data.success ? "Updated client (NOT REALLY)" : "Did NOT receive success"
+        msgs.push(message)
+        show_msg_box()
+    }).catch(error => {
+        console.log('Error: ', error)
+    })
 }
 
 
