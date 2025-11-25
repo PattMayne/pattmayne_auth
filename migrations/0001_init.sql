@@ -31,15 +31,15 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE TABLE IF NOT EXISTS client_sites (
     id INT AUTO_INCREMENT PRIMARY KEY,
     client_id VARCHAR(100) NOT NULL UNIQUE, -- public identifier. random string
-    hashed_client_secret VARCHAR(255), -- only for confidential clients (ie backend, not user)
+    hashed_client_secret VARCHAR(255) NOT NULL DEFAULT "", -- only for confidential clients (ie backend, not user)
     name VARCHAR(100) NOT NULL,
     domain VARCHAR(255) NOT NULL UNIQUE,
     redirect_uri VARCHAR(255) NOT NULL, -- maybe not needed. Keeping for future-proofing
-    description TEXT,
-    logo_url VARCHAR(255),
+    description TEXT NOT NULL DEFAULT "",
+    logo_url VARCHAR(255) NOT NULL DEFAULT "",
     is_active BOOL NOT NULL DEFAULT TRUE,
-    scopes VARCHAR(255), -- maybe not needed. Keeping for future-proofing
+    scopes VARCHAR(255) NOT NULL DEFAULT "", -- maybe not needed. Keeping for future-proofing
     client_type VARCHAR(50) NOT NULL DEFAULT "confidential", -- e.g. "confidential" (default), "public", "native" (mobile/desktop)
     is_internal BOOL NOT NULL DEFAULT FALSE, -- only "TRUE" for self (auth site, this site)
-    created_timestamp TIMESTAMP DEFAULT UTC_TIMESTAMP
+    created_timestamp TIMESTAMP NOT NULL DEFAULT UTC_TIMESTAMP
 );

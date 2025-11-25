@@ -26,7 +26,7 @@ use serde::{ Deserialize, Serialize };
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::db;
 use crate::utils;
-use crate::auth;
+use crate::auth::{self, UserReqData};
 
 /* 
  * 
@@ -204,8 +204,15 @@ struct NewPassword {
     pub password: String,
 }
 
+
 #[derive(Deserialize)]
-pub struct NewClientInputs {
+pub struct ClientDataReq {
+    pub client_id: String,
+}
+
+
+#[derive(Deserialize)]
+pub struct ClientInputs {
     pub site_domain: String,
     pub site_name: String,
     pub client_id: String,
@@ -216,7 +223,7 @@ pub struct NewClientInputs {
     pub is_active: bool,
 }
 
-impl NewClientInputs {
+impl ClientInputs {
     pub fn trim_all_strings(&mut self) {
         self.client_id = self.client_id.trim().to_string();
         self.site_domain = self.site_domain.trim().to_string();
@@ -281,6 +288,7 @@ struct AdminTemplate<'a> {
     title: &'a str,
     message: &'a str,
     user: auth::UserReqData,
+    client_refs: Vec<db::ClientRef>,
 }
 
 
@@ -292,6 +300,15 @@ struct NewClientTemplate<'a> {
     message: &'a str,
 }
 
+
+#[derive(Template)]
+#[template(path ="edit_client_form_page.html")]
+struct EditClientTemplate<'a> {
+    user: auth::UserReqData,
+    title: &'a str,
+    message: &'a str,
+    client_data: db::ClientData
+}
 
 
 #[derive(Template)]
@@ -503,7 +520,7 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
 #[post("/add_client")]
 async fn new_client_post(
     req: HttpRequest,
-    mut inputs: web::Json<NewClientInputs>
+    mut inputs: web::Json<ClientInputs>
 ) -> HttpResponse {
     // MAKE SURE they are an admin
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
@@ -620,6 +637,25 @@ async fn new_client_post(
             })
     }
 
+}
+
+/**
+ * The post route for adding new CLIENT SITE to the database.
+ * Checks that the user is truly an admin, checks that all the 
+ * data is legit, then adds it to the database.
+ * Lots of opportunities to send errors.
+ */
+#[post("/update_client")]
+async fn update_client_post(
+    req: HttpRequest,
+    mut inputs: web::Json<ClientInputs>
+) -> HttpResponse {
+    println!("UPDATING CLIENT");
+    return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
+        .json(ErrorResponse{
+            error: String::from("PLACEHOLDER."),
+            code: 406
+        });
 }
 
 
@@ -834,6 +870,9 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
  * 
  * 
  * 
+ * 
+ * 
+ * 
  * ========================
  * ========================
  * =====              =====
@@ -841,6 +880,9 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
  * =====              =====
  * ========================
  * ========================
+ * 
+ * 
+ * 
  * 
  * 
  * 
@@ -932,63 +974,105 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
     println!("ADMIN HOME");
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-        match user_req_data.id {
-        Some(_id) =>
-            // make sure they're admin (basically a ternary)
-            if user_req_data.is_admin() {
-                let title: &str = "ADMIN DASHBOARD";
-                let admin_template: AdminTemplate = AdminTemplate {
-                    title,
-                    message: "Perform admin actions.",
-                    user: user_req_data
-                };
-                HttpResponse::Ok()
-                    .content_type("text/html")
-                    .body(admin_template.render().unwrap())
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
+    }
 
-            } else {                                        // send to unauthorized error page
-                redirect_to_err(String::from("403"))
-                    .respond_to(&req)
-                    .map_into_boxed_body()
-            },
-        None => send_to_login()
-    }    
+    let title: &str = "ADMIN DASHBOARD";
+
+    // Get client site references to list on admin site
+    let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
+        Ok(refs) => refs,
+        Err(e) => {
+            eprintln!("Error retrieving client references: {e}");
+            Vec::new()
+        }
+    };
+
+    let admin_template: AdminTemplate = AdminTemplate {
+        title,
+        message: "Perform admin actions.",
+        user: user_req_data,
+        client_refs
+    };
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(admin_template.render().unwrap())  
 }
 
-pub async fn admin_redirect(req: HttpRequest) -> impl Responder {
+
+pub async fn admin_redirect() -> impl Responder {
     Redirect::to("/admin/dashboard")
 }
 
 
-
 /**
- * The page where an admin can enter information for a new client site.
+ * The page where an admin can enter information for a NEW client site.
  * This is just the form. Another (post) function will receive the data
  * submitted from this form and process it.
  */
 pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    match user_req_data.id {
-        Some(_id) => 
-            // make sure they're admin (basically a ternary)
-            if user_req_data.is_admin() {
-                let new_client_template: NewClientTemplate = NewClientTemplate {
-                    title: "Add New Client Site",
-                    message: "Add a new client site to the network.",
-                    user: user_req_data
-                };
-                HttpResponse::Ok()
-                    .content_type("text/html")
-                    .body(new_client_template.render().unwrap())
-            } else {
-                // send to unauthorized error page
-                redirect_to_err(String::from("403"))
-                    .respond_to(&req)
-                    .map_into_boxed_body()
-            },
-        None => send_to_login()
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
     }
+
+    let new_client_template: NewClientTemplate = NewClientTemplate {
+        title: "Add New Client Site",
+        message: "Add a new client site to the network.",
+        user: user_req_data
+    };
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(new_client_template.render().unwrap())
+}
+
+
+/**
+ * The page where an admin can EDIT information for an EXISTING client site.
+ * This is just the form. Another (post) function will receive the data
+ * submitted from this form and process it.
+ */
+#[get("/edit_client/{auth_id}")]
+pub async fn edit_client_site_form_page(
+    req: HttpRequest,
+    auth_id: web::Path<String>
+) -> impl Responder {
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
+    }
+
+    // Get the requested client site data
+    let client_data_result: Result<Option<db::ClientData>, anyhow::Error> =
+        db::get_client_by_client_id(&auth_id).await;
+
+    if client_data_result.is_err() {
+        return return_error_page(&req, 404);
+    }
+
+    match client_data_result.unwrap() {
+        Some(client_data) => {
+            let new_client_template: EditClientTemplate = EditClientTemplate {
+                title: "Add New Client Site",
+                message: "Add a new client site to the network.",
+                user: user_req_data,
+                client_data
+            };
+            
+            HttpResponse::Ok()
+                .content_type("text/html")
+                .body(new_client_template.render().unwrap())
+        },
+        None => return_error_page(&req, 404)
+    }
+
 
 }
 
@@ -999,45 +1083,46 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
 #[get("/dashboard")]
 pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    
-    match user_req_data.id {
-        Some(id) => {
-            let title: &str = "DASHBOARD";
-            match db::get_user_by_id(id).await {
-                Ok(Some(user)) =>{
-                    let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
-                        user_data: &user,
-                        title,
-                        user: user_req_data
-                    };
 
-                    return HttpResponse::Ok()
-                        .content_type("text/html")
-                        .body(dashboard_template.render().unwrap());
-                },
-                Ok(None) => {
-                    return send_to_login();
-                },
-                Err(_e) => {
-                    // redirect to ERROR PAGE
-                    return HttpResponse::Found()
-                        .append_header((header::LOCATION, "/error"))
-                        .finish();
-                }
-            };
-        },
-        None => send_to_login()
+    if user_req_data.id.is_none() {
+        return send_to_login();
     }
+
+    let id: i32 = user_req_data.id.unwrap();
+    let title: &str = "DASHBOARD";
+    match db::get_user_by_id(id).await {
+        Ok(Some(user)) =>{
+            let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
+                user_data: &user,
+                title,
+                user: user_req_data
+            };
+
+            return HttpResponse::Ok()
+                .content_type("text/html")
+                .body(dashboard_template.render().unwrap());
+        },
+        Ok(None) => {
+            return send_to_login();
+        },
+        Err(_e) => {
+            // redirect to ERROR PAGE
+            return HttpResponse::Found()
+                .append_header((header::LOCATION, "/error"))
+                .finish();
+        }
+    };
 }
 
 
+// Function for the catch-all "not found" route
 pub async fn not_found() -> impl Responder {
     Redirect::to("/error/404")
 }
 
 
 #[get("/error/{code}")]
-async fn error_page(req: HttpRequest, path:web::Path<String>) -> HttpResponse {
+async fn error_page(req: HttpRequest, path: web::Path<String>) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     let code_u16 = match path.into_inner().parse::<u16>() {
@@ -1106,6 +1191,13 @@ fn send_to_login() -> HttpResponse {
         .finish()
 }
 
+fn non_admin_rejection(req: &HttpRequest) -> HttpResponse {
+    // send to unauthorized error page
+    return redirect_to_err(String::from("403"))
+        .respond_to(req)
+        .map_into_boxed_body();
+}
+
 /**
  * Sometimes we don't know what went wrong and we need to return a JSON
  * object which says so.
@@ -1124,4 +1216,37 @@ fn return_authentication_err_json() -> HttpResponse {
         error: String::from("Authentication required"),
         code: 401
     })
+}
+
+/**
+ * Redirect to error page with a simple and easy function
+ */
+fn return_error_page(req: &HttpRequest, code: u16) -> HttpResponse {
+    return redirect_to_err(code.to_string())
+        .respond_to(req)
+        .map_into_boxed_body();
+}
+
+
+/**
+ * We often check if the user is admin.
+ * This returns the appropriate redirect depending on
+ * which kind of non-admin the user is.
+ */
+fn redirect_non_admin(
+    user_req_data: &UserReqData,
+    req: &HttpRequest
+) -> Option<HttpResponse> {
+    // Send guest to login
+    if user_req_data.id.is_none() {
+        return Some(send_to_login());
+    }
+
+    // If they're not admin send them to error page
+    if !user_req_data.is_admin() {
+        return Some(non_admin_rejection(&req));
+    }
+
+    // The user is an admin
+    None
 }

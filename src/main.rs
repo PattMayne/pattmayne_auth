@@ -57,6 +57,8 @@ async fn main() -> std::io::Result<()> {
                     .route("/dashboard", web::get().to(routes::admin_home))
                     .route("/new_client", web::get().to(routes::new_client_site_form_page))
                     .service(routes::new_client_post)
+                    .service(routes::update_client_post)
+                    .service(routes::edit_client_site_form_page)
             )
             .default_service(web::get().to(routes::not_found)) // <- catch-all
             .wrap(from_fn(middleware::jwt_cookie_middleware))

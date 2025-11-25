@@ -18,22 +18,21 @@
             <div class="large-12 cell">
                 <h1>{{ title }}</h1>
                 <p>
-                    This will be the main page for Pattmayne Games.
+                    {{ message }}
                 </p>
             </div>
 
             <div class="large-12 cell">
-                <div class="callout">
-                    <p>
-                        {{ message }}
-                    </p>
-                </div>
 
                 <div class="callout primary">
                     <h4>ADMIN ACTIONS</h4>
-                    <a href="/admin/new_client" class="button small">ADD NEW CLIENT</a>
-                    <h6>Existing Clients</h6>
+
+                    <h6>Edit Client Sites</h6>
+                    {% for client_ref in client_refs  %}
+                        <a href="/admin/edit_client/{{ client_ref.client_id }}" class="button small">{{ client_ref.name }}</a>
+                    {% endfor %}
                     <p><i>...list of clients will go here...</i> we will send in a vec of client objs... ids and names... and a page to edit them all</p>
+                    <a href="/admin/new_client" class="button small">ADD NEW CLIENT</a>
                 </div>
 
                 <!-- message box -->

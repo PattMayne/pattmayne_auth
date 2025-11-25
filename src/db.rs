@@ -75,13 +75,30 @@ pub struct NewClientData {
     pub is_active: bool,
 }
 
+pub struct ClientData {
+    pub id: i32,
+    pub domain: String,
+    pub name: String,
+    pub hashed_client_secret: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub logo_url: String,
+    pub description: String,
+    pub client_type: String,
+    is_active: i8,
+    is_internal: i8,
+    pub created_timestamp: OffsetDateTime,
+}
+
 
 /* A container to satisfy sqlx's insatiable lust for structs.
  * For when we need to get a list of all the client_ids from
  * the client_sites table.
 */
-struct ClientId {
+pub struct ClientRef {
     pub client_id: String,
+    pub name: String,
+    pub logo_url: String,
 }
 
 
@@ -110,6 +127,11 @@ impl ClientSites {
     pub fn get_scopes(&self) -> &String { &self.scopes }
     pub fn get_is_internal(&self) -> bool { self.is_internal == 1 }
     pub fn get_created_timestamp(&self) -> &OffsetDateTime { &self.created_timestamp }
+}
+
+impl ClientData {
+    pub fn get_is_active(&self) -> bool { self.is_active == 1 }
+    pub fn get_is_internal(&self) -> bool { self.is_internal == 1 }
 }
 
 
@@ -255,21 +277,33 @@ pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option
 }
 
 /**
- * Get a collection of all the client_ids in the client_sites table.
+ * Get a collection of all the client_ids and names in the client_sites table.
+ * These are references for the sake of lists, where the client_id can also
+ * provide a handle for a link to an edit page (or whatever)
  */
-pub async fn get_all_client_ids() -> Result<Vec<String>> {
+pub async fn get_client_refs() -> Result<Vec<ClientRef>> {
     let pool: MySqlPool = create_pool().await?;
-    let client_id_structs: Vec<ClientId> = sqlx::query_as!(
-        ClientId,
-        "SELECT client_id FROM client_sites"
+    let client_refs: Vec<ClientRef> = sqlx::query_as!(
+        ClientRef,
+        "SELECT client_id, name, logo_url FROM client_sites"
     ).fetch_all(&pool).await?;
 
-    let client_ids: Vec<String> = client_id_structs.into_iter()
-        .map(|client_id_struct| {
-            return client_id_struct.client_id;
-        }).collect();
+    Ok(client_refs)
+}
 
-    Ok(client_ids)
+
+pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<ClientData>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        ClientData,
+        "SELECT id, client_id, hashed_client_secret,
+            name, domain, redirect_uri,
+            description, logo_url, is_active,
+            client_type, is_internal, created_timestamp
+            FROM client_sites WHERE client_id = ?",
+        client_id
+    ).fetch_optional(&pool).await?)
 }
 
 
@@ -296,7 +330,8 @@ pub async fn get_all_client_ids() -> Result<Vec<String>> {
  */
 
  /**
-  * 
+  * Add a refresh token to the database.
+  * for a particular user and particular client site
   */
  pub async fn add_refresh_token(
     user_id: i32,

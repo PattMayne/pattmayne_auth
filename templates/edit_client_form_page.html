@@ -1,0 +1,156 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }}</title>
+        <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+        <link rel="stylesheet" href="/static/css/foundation.css">
+        <link rel="stylesheet" href="/static/css/app.css">
+    </head>
+
+
+    <body>
+    {% include "header.html" %}
+
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 cell">
+                <h1>{{ title }}</h1>
+                    <p>{{ message }}</p>
+            </div>
+
+            <div class="large-12 cell">
+                <div class="callout">
+
+                    <div class="grid-x grid-padding-x">
+                        <div class="large-12 cell">
+                            <h4>{{ title }}</h4>
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                Site Domain:
+                                <input
+                                    id="site_domain"
+                                    name="site_domain"
+                                    type="text"
+                                    value="{{ client_data.domain }}"
+                                />
+                            </label>
+
+                            <label>
+                                Site Name (Public facing title):
+                                <input
+                                    id="site_name"
+                                    name="site_name"
+                                    type="text"
+                                    value="{{ client_data.name }}"
+                                />
+                            </label>
+
+                            <label>
+                                Client ID (random unique public identifier):
+                                <input
+                                    id="client_id"
+                                    name="client_id"
+                                    type="text"
+                                    value="{{ client_data.client_id }}"
+                                />
+                            </label>
+
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                Redirect URI:                                    
+                                <input
+                                    id="redirect_uri"
+                                    name="redirect_uri"
+                                    type="text"
+                                    value="{{ client_data.redirect_uri }}"
+                                />
+                            </label>
+
+                            <label>
+                                Logo URL:
+                                <input
+                                    id="logo_url"
+                                    name="logo_url"
+                                    type="text"
+                                    value="{{ client_data.logo_url }}"
+                                />
+                            </label>
+                            
+                            <label>
+                                Type:
+                                <select id="client_type" name="client_type">
+                                    <option
+                                        value="confidential"
+                                        {% if client_data.client_type == "confidential" %}selected{% endif %}
+                                    >
+                                        Confidential
+                                    </option>
+                                    <option
+                                        value="public"
+                                        {% if client_data.client_type == "public" %}selected{% endif %}
+                                    >
+                                        Public
+                                    </option>
+                                    <option
+                                        value="native"
+                                        {% if client_data.client_type == "native" %}selected{% endif %}
+                                    >
+                                        Native (mobile/desktop)
+                                    </option>
+                                </select>
+                            </label>
+
+
+                        </div>
+                        <div class="large-4 medium-4 small-12 cell">
+                            <label>
+                                Description (public facing):
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    style="height: 200px;"
+                                    >{{ client_data.description }}</textarea>
+                            </label>
+
+                            <label>
+                                Is Active:
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    name="is_active"
+                                    {% if client_data.get_is_active() %}checked{% endif %}
+                                >
+                            </label>
+                        </div>
+                        <div class="large-12 cell">
+                            <a class="button small" onclick="submit_data()">SAVE CHANGES</a>
+                        </div>
+                        <div class="large-12 cell">
+                            <a class="button small" onclick="request_new_secret()">GENERATE NEW SECRET</a>
+                        </div>
+                    </div>
+               </div>
+
+
+                <div class="callout primary" id="msg_box">
+                </div>
+
+            </div>
+        </div> <!-- end of grid-x -->
+
+    </div><!-- end of grid-container -->
+            
+
+        <script src="/static/js/vendor/jquery.js"></script>
+        <script src="/static/js/vendor/what-input.js"></script>
+        <script src="/static/js/vendor/foundation.js"></script>
+        <script type="module" src="/static/js/edit_client_form.js"></script>
+    </body>
+
+
+</html>
