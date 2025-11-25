@@ -587,6 +587,8 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
  * 
  * 
  * 
+ * 
+ * 
  * ==============================
  * ==============================
  * =====                    =====
@@ -596,7 +598,9 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
  * ==============================
  * 
  * 
+ * 
  * update existing entries in the DB
+ * 
  * 
  * 
  * 
@@ -683,6 +687,8 @@ pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::E
  * 
  * 
  * 
+ * 
+ * 
  * ==============================
  * ==============================
  * =====                    =====
@@ -690,6 +696,8 @@ pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::E
  * =====                    =====
  * ==============================
  * ==============================
+ * 
+ * 
  * 
  * 
  * 
@@ -722,6 +730,7 @@ pub async fn delete_refresh_token(user_id: i32) -> Result<i32, anyhow::Error> {
  * 
  * 
  * 
+ * 
  * ==============================
  * ==============================
  * =====                    =====
@@ -731,7 +740,9 @@ pub async fn delete_refresh_token(user_id: i32) -> Result<i32, anyhow::Error> {
  * ==============================
  * 
  * 
+ * 
  * Functions which facilitate the processing of the above DB functions
+ * 
  * 
  * 
  * 

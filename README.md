@@ -11,19 +11,19 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * * create an enum of apps that can use this
  * * or MAYBE they should be in the DB instead.
  * Containerize with Docker
- * Switch to PostgreSQL because bools are bools instead of ints (but maybe that's not important)
  * move env variable from .env to somewhere more secure for production
- * Make Error page take Http code args and maybe a message
  * Remove magic strings from front-end JS. Put them in globals or resources file.
- * Make tests, especially for error page.
- * Table in DB to store accepted sites (client sites)
- * Admin page for adding/removing client sites
+ * Make tests
  * When a person tries to register on a site, but they're already registered on another, just log them in
  * * This will create a refresh token for THAT site
  * * I don't think they can auto-log in to ALL sites. They must log in to get the JWT cookie.
  * * So each site will have its own expiry for refresh tokens.
  * * BUT logging out of one will log out of all.
  * * Maybe logging IN to one should extend the expiry of all? But only those that already exist.
+ * Email verification of accounts (with Mailjet https://www.mailjet.com/pricing/)
+ * Integrate payment APIs (probably with reqwest crate)
+ * * Integrate Stripe for payments
+ * * Accept crypto currency with a 3rd party API (like coinbase)
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
