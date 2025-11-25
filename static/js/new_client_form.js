@@ -24,6 +24,7 @@ const submit_data = async () => {
     const description = document.getElementById("description").value.trim()
     const logo_url = document.getElementById("logo_url").value.trim()
     const client_type = document.getElementById("client_type").value.trim()
+    const category = document.getElementById("category").value.trim()
     const is_active = document.getElementById("is_active").checked
 
     // make sure required fields are not empty
@@ -48,6 +49,7 @@ const submit_data = async () => {
         redirect_uri: redirect_uri,
         logo_url: logo_url,
         description: description,
+        category: category,
         client_type: client_type,
         is_active: is_active
     };

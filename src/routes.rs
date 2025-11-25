@@ -219,6 +219,7 @@ pub struct ClientInputs {
     pub redirect_uri: String,
     pub logo_url: String,
     pub description: String,
+    pub category: String,
     pub client_type: String,
     pub is_active: bool,
 }
@@ -232,6 +233,7 @@ impl ClientInputs {
         self.logo_url = self.logo_url.trim().to_string();
         self.client_type = self.client_type.trim().to_string();
         self.description = self.description.trim().to_string();
+        self.category = self.category.trim().to_string();
     }
 
     pub fn print_all_strings(&self) {
@@ -242,6 +244,7 @@ impl ClientInputs {
         println!("logo_url: {}", self.logo_url);
         println!("client_type: {}", self.client_type);
         println!("desc: {}", self.description);
+        println!("category: {}", self.category);
     }
 }
 
@@ -522,15 +525,10 @@ async fn new_client_post(
     req: HttpRequest,
     mut inputs: web::Json<ClientInputs>
 ) -> HttpResponse {
-    // MAKE SURE they are an admin
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    if !user_req_data.is_admin() {
-        // tell front-end to redirect to error page
-        return HttpResponse::build(StatusCode::FORBIDDEN)
-            .json(ErrorResponse{
-                error: String::from("FORBIDDEN"),
-                code: 403
-            })
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
     }
 
     // Trim every string
@@ -595,6 +593,7 @@ async fn new_client_post(
             hashed_client_secret: hashed_secret.to_owned(),
             logo_url: inputs.logo_url.to_owned(),
             description: inputs.description.to_owned(),
+            category: inputs.category.to_owned(),
             client_type: inputs.client_type.to_owned(),
             is_active: inputs.is_active,
         };
@@ -651,16 +650,10 @@ async fn update_client_post(
 ) -> HttpResponse {
     println!("UPDATING CLIENT");
 
-
-    // MAKE SURE they are an admin
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    if !user_req_data.is_admin() {
-        // tell front-end to redirect to error page
-        return HttpResponse::build(StatusCode::FORBIDDEN)
-            .json(ErrorResponse{
-                error: String::from("FORBIDDEN"),
-                code: 403
-            })
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
     }
 
     // Trim every string
@@ -724,12 +717,12 @@ async fn update_client_post(
             redirect_uri: inputs.redirect_uri.to_owned(),
             logo_url: inputs.logo_url.to_owned(),
             description: inputs.description.to_owned(),
+            category: inputs.category.to_owned(),
             client_type: inputs.client_type.to_owned(),
             is_active: inputs.is_active,
         };
-
     
-        let update_client_result: Result<u64, anyhow::Error> =
+        let update_client_result: Result<i32, anyhow::Error> =
             db::update_external_client(client_data).await;
         
         match update_client_result {

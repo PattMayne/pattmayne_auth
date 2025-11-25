@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS client_sites (
     is_active BOOL NOT NULL DEFAULT TRUE,
     scopes VARCHAR(255) NOT NULL DEFAULT "", -- maybe not needed. Keeping for future-proofing
     client_type VARCHAR(50) NOT NULL DEFAULT "confidential", -- e.g. "confidential" (default), "public", "native" (mobile/desktop)
+    category VARCHAR(50) NOT NULL, -- OPTIONS: game, tool, service
     is_internal BOOL NOT NULL DEFAULT FALSE, -- only "TRUE" for self (auth site, this site)
     created_timestamp TIMESTAMP NOT NULL DEFAULT UTC_TIMESTAMP
 );

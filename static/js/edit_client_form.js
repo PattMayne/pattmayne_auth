@@ -23,6 +23,7 @@ const submit_data = async () => {
     const redirect_uri = document.getElementById("redirect_uri").value.trim()
     const description = document.getElementById("description").value.trim()
     const logo_url = document.getElementById("logo_url").value.trim()
+    const category = document.getElementById("category").value.trim()
     const client_type = document.getElementById("client_type").value.trim()
     const is_active = document.getElementById("is_active").checked
 
@@ -48,6 +49,7 @@ const submit_data = async () => {
         redirect_uri: redirect_uri,
         logo_url: logo_url,
         description: description,
+        category: category,
         client_type: client_type,
         is_active: is_active
     };
@@ -76,11 +78,13 @@ const submit_data = async () => {
             }
             return response.json()
     }).then(data => {
-        const message = !!data.success ? "Updated client (NOT REALLY)" : "Did NOT receive success"
+        const message = !!data.success ? "Updated client" : "UPDATE FAILED"
         msgs.push(message)
         show_msg_box()
     }).catch(error => {
-        console.log('Error: ', error)
+        const message = "Error: " + error
+        msgs.push(message)
+        show_msg_box()
     })
 }
 

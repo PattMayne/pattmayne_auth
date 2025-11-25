@@ -63,7 +63,9 @@ pub struct RefreshToken {
     expires_timestamp: OffsetDateTime
 }
 
-
+/**
+ * When you UPDATE existing client site data
+ */
 pub struct UpdateClientData {
     pub site_domain: String,
     pub site_name: String,
@@ -71,6 +73,7 @@ pub struct UpdateClientData {
     pub redirect_uri: String,
     pub logo_url: String,
     pub description: String,
+    pub category: String,
     pub client_type: String,
     pub is_active: bool,
 }
@@ -80,6 +83,9 @@ pub struct UpdateClientSecret {
 }
 
 
+/**
+ * When you ENTER client site data for the first time
+ */
 pub struct NewClientData {
     pub site_domain: String,
     pub site_name: String,
@@ -88,10 +94,14 @@ pub struct NewClientData {
     pub redirect_uri: String,
     pub logo_url: String,
     pub description: String,
+    pub category: String,
     pub client_type: String,
     pub is_active: bool,
 }
 
+/**
+ * When you GET the client site data to use
+ */
 pub struct ClientData {
     pub id: i32,
     pub domain: String,
@@ -101,6 +111,7 @@ pub struct ClientData {
     pub redirect_uri: String,
     pub logo_url: String,
     pub description: String,
+    pub category: String,
     pub client_type: String,
     is_active: i8,
     is_internal: i8,
@@ -118,33 +129,6 @@ pub struct ClientRef {
     pub logo_url: String,
 }
 
-
-#[derive(serde::Serialize)]
-pub struct ClientSites {
-    id: i32,
-    client_id: String,
-    client_secret: String,
-    name: String,
-    domain: String,
-    logo_url: String,
-    is_active: i8, // actually a bool
-    scopes: String,
-    is_internal: i8, // actually a bool
-    created_timestamp: OffsetDateTime
-}
-
-impl ClientSites {
-    pub fn get_id(&self) -> i32 { self.id }
-    pub fn get_client_secret(&self) -> &String { &self.client_secret }
-    pub fn get_name(&self) -> &String { &self.name }
-    pub fn get_client_id(&self) -> &String { &self.client_id }
-    pub fn get_domain(&self) -> &String { &self.domain }
-    pub fn get_logo_url(&self) -> &String { &self.logo_url }
-    pub fn get_is_active(&self) -> bool { self.is_active == 1 }
-    pub fn get_scopes(&self) -> &String { &self.scopes }
-    pub fn get_is_internal(&self) -> bool { self.is_internal == 1 }
-    pub fn get_created_timestamp(&self) -> &OffsetDateTime { &self.created_timestamp }
-}
 
 impl ClientData {
     pub fn get_is_active(&self) -> bool { self.is_active == 1 }
@@ -234,6 +218,8 @@ impl User {
  * 
  * 
  * 
+ * 
+ * 
  */
 
 
@@ -316,7 +302,7 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
         ClientData,
         "SELECT id, client_id, hashed_client_secret,
             name, domain, redirect_uri,
-            description, logo_url, is_active,
+            description, category, logo_url, is_active,
             client_type, is_internal, created_timestamp
             FROM client_sites WHERE client_id = ?",
         client_id
@@ -516,6 +502,7 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
     let name: &str = "Auth Site";
     let redirect_uri: &str = "127.0.0.1:8080/dashboard";
     let client_type: &str = "confidential";
+    let category: &str = "service";
     let is_internal: bool = true;
 
 
@@ -527,28 +514,26 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
             domain,
             redirect_uri,
             client_type,
+            category,
             is_internal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(client_id)
         .bind(client_secret)
         .bind(name)
         .bind(domain)
         .bind(redirect_uri)
         .bind(client_type)
+        .bind(category)
         .bind(is_internal)
         .execute(&pool).await.map_err(|e| {
-            eprintln!("Failed to save FIRST ADMIN user to database: {:?}", e);
-            anyhow!("Could not save FIRST ADMIN user to database: {e}")
+            eprintln!("Failed to save FIRST AUTH client to database: {:?}", e);
+            anyhow!("Could not save FIRST AUTH client to database: {e}")
         })?;
 
     Ok(result.rows_affected() > 0)
 }
 
 
-pub async fn update_external_client(update_client_data: UpdateClientData) -> Result<u64, anyhow::Error> {
-    println!("Updating client in the database.");
-    Ok(100)
-}
 
 /**
  * When the server starts up we make sure the auth site (this site)
@@ -574,9 +559,10 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
             logo_url,
             client_type,
             description,
+            category,
             is_internal,
             is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(new_client_data.client_id)
         .bind(new_client_data.hashed_client_secret)
         .bind(new_client_data.site_name)
@@ -585,6 +571,7 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
         .bind(new_client_data.logo_url)
         .bind(new_client_data.client_type)
         .bind(new_client_data.description)
+        .bind(new_client_data.category)
         .bind(0)
         .bind(new_client_data.is_active)
         .execute(&pool).await.map_err(|e| {
@@ -616,6 +603,31 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
  */
 
 
+pub async fn update_external_client(update_client_data: UpdateClientData) -> Result<i32, anyhow::Error> {
+    println!("Updating client in the database.");
+        let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+    "UPDATE client_sites SET name = ?, domain = ?, redirect_uri = ?,
+            description = ?, logo_url = ?, is_active = ?,
+            client_type = ?, category = ? WHERE client_id = ?")
+        .bind(update_client_data.site_name)
+        .bind(update_client_data.site_domain)
+        .bind(update_client_data.redirect_uri)
+        .bind(update_client_data.description)
+        .bind(update_client_data.logo_url)
+        .bind(update_client_data.is_active)
+        .bind(update_client_data.client_type)
+        .bind(update_client_data.category)
+        .bind(update_client_data.client_id)
+        .execute(&pool)
+        .await?;
+
+    Ok(result.rows_affected() as i32)
+}
 
 pub async fn update_real_names(
     first_name: &String,
