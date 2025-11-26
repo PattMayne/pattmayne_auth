@@ -44,7 +44,7 @@ impl NewJwtObj {
  * Create a UserReqData object indicating whether user is logged in,
  * or a guest (based on whether JWT is valid).
  * Put that UserReqData object into the response for later functions.
- */
+*/
 pub async fn login_status_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
@@ -123,7 +123,7 @@ async fn get_user_req_data_from_opt(
                 * => check REFRESH TOKEN
                 * => if that is valid (and non-expired):
                 * ====> set FLAG for setting the new JWT
-                * => ELSE (TO DO)
+                * => ELSE
                 * ====> set FLAG to make user log in again
                 */
             

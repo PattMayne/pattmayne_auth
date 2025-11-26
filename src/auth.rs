@@ -7,6 +7,7 @@ use actix_web::{ HttpMessage, HttpRequest, cookie::{Cookie, SameSite}};
 use rand::{distr::Alphanumeric, Rng};
 use std::fmt;
 
+use crate::utils;
 
 /*
  * 
@@ -118,6 +119,7 @@ pub struct UserReqData {
     pub username: Option<String>,
     pub role: String, // guest, player, admin
     pub logged_in: bool,
+    pub lang: utils::SupportedLangs,
 }
 
 
@@ -160,6 +162,7 @@ impl UserReqData {
                     username: Some(claims.get_username().to_owned()),
                     role: claims.get_role().to_owned(),
                     logged_in: true,
+                    lang: utils::SupportedLangs::English,
                 }
             },
             None => {
@@ -168,6 +171,7 @@ impl UserReqData {
                     username: None,
                     role: String::from("guest"),
                     logged_in: false,
+                    lang: utils::SupportedLangs::English,
                 }
             }
         }
@@ -179,6 +183,10 @@ impl UserReqData {
 
     pub fn is_admin(&self) -> bool {
         &self.role == "admin"
+    }
+
+    pub fn lang_suffix(&self) -> &'static str {
+        self.lang.suffix()
     }
 }
 

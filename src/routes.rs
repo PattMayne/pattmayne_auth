@@ -27,6 +27,7 @@ use serde::{ Deserialize, Serialize };
 use crate::db;
 use crate::utils;
 use crate::auth::{self, UserReqData};
+use crate::resources::get_translation;
 
 /* 
  * 
@@ -1000,7 +1001,7 @@ async fn home(req: HttpRequest) -> impl Responder {
     let state_string: &str =
         if user_req_data.logged_in { "YOU ARE LOGGED IN" }
         else { "NOT LOGGED IN" };
-    let title: &str = "Pattmayne Games";
+    let title: &str = get_translation("home.title", &user_req_data.lang);
 
     let home_template: HomeTemplate<'_> = HomeTemplate {
         message: state_string,

@@ -10,6 +10,7 @@ mod db;
 mod utils;
 mod auth;
 mod middleware;
+mod resources;
 
 /**
  * The main function logs all the routes as routes or "services".

@@ -29,7 +29,8 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Switch from Foundation to Bulma
  * * https://bulma.io/documentation/columns/responsiveness/
  * * This requires I do my own ARIA compliance stuff
- * Replace TTFs with WOFF (FontSquirrel can generate them from TTF)
+ * Read language from header to create FR option in UserReqObj
+ * Give user "lang" option in the DB
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
@@ -40,3 +41,9 @@ Client sites are stored in a clients table in the DB.
 Refresh tokens are stored in a refresh_tokens table in the DB. Refresh token entries include a user_id and a client_id. A user has a different token for each client. The expiry date of each token should be the same, to ensure that the user is made to log in periodically. When the user is logged into one client, they are logged into all. But when one refresh token expires, they all expire.
 
 For most requests the user makes on the client site, they do NOT need to interact with the auth app (this app). Client apps have some autonomy.
+
+### RESOURCES FILE
+* Create a phf::phf_map! list of values, french and english
+* Set a language struct in the req with middleware
+* * maybe also use a lang enum which maps to "en" "fr" "el"
+* Retrieve values like home.title with a function that auto-contatenates the .en language choice

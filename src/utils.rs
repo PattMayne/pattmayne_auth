@@ -201,3 +201,55 @@ impl ErrorData {
         }
     }
 }
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==============================
+ * ==============================
+ * =====                    =====
+ * =====  LANGUAGE SUPPORT  =====
+ * =====                    =====
+ * ==============================
+ * ==============================
+ * 
+ * 
+ * 
+ * 
+*/
+
+/**
+ * This enum goes into the req object
+ * to deliver standard language suffixes
+ * for the translations script.
+ */
+#[derive(Clone)]
+pub enum SupportedLangs {
+    French,
+    English
+}
+
+impl SupportedLangs {
+    pub fn suffix(&self) -> &'static str {
+        match self {
+            SupportedLangs::English => "en",
+            SupportedLangs::French => "fr"
+        }
+    }
+
+    // When checking the header (accept-lang) or DB for lang
+    pub fn from(input: &str) -> SupportedLangs {
+        if input.starts_with("en") {
+            return SupportedLangs::English;
+        } else if input.starts_with("fr") {
+            return SupportedLangs::French;
+        }
+
+        // Default
+        return SupportedLangs::English;
+    }
+}
+
