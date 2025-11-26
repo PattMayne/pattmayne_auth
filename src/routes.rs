@@ -997,15 +997,16 @@ async fn home(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // ORIGINAL CODE FOLLOWS
-
-    let state_string: &str =
-        if user_req_data.logged_in { "YOU ARE LOGGED IN" }
-        else { "NOT LOGGED IN" };
-    let title: &str = get_translation("home.title", &user_req_data.lang);
+    let title: String = get_translation("home.title", &user_req_data.lang, None);
+    let message: String = get_translation(
+        "home.greeting",
+        &user_req_data.lang,
+        Some(&[&user_req_data.get_role()])
+    );
 
     let home_template: HomeTemplate<'_> = HomeTemplate {
-        message: state_string,
-        title: title,
+        message: &message,
+        title: &title,
         user: user_req_data
     };
 
