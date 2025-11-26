@@ -162,7 +162,7 @@ impl UserReqData {
                     username: Some(claims.get_username().to_owned()),
                     role: claims.get_role().to_owned(),
                     logged_in: true,
-                    lang: utils::SupportedLangs::English,
+                    lang: utils::SupportedLangs::French,
                 }
             },
             None => {
@@ -171,7 +171,7 @@ impl UserReqData {
                     username: None,
                     role: String::from("guest"),
                     logged_in: false,
-                    lang: utils::SupportedLangs::English,
+                    lang: utils::SupportedLangs::French,
                 }
             }
         }

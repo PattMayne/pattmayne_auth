@@ -336,6 +336,7 @@ struct ErrorTemplate<> {
 #[template(path ="dashboard.html")]
 struct DashboardTemplate<'a> {
     title: &'a str,
+    message: &'a str,
     user_data: &'a db::User,
     user: auth::UserReqData,
 }
@@ -996,7 +997,6 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
 async fn home(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    // ORIGINAL CODE FOLLOWS
     let title: String = get_translation("home.title", &user_req_data.lang, None);
     let message: String = get_translation(
         "home.greeting",
@@ -1031,12 +1031,20 @@ pub fn redirect_to_err(err_code: String) -> impl Responder {
 /* LOGIN PAGE ROUTE FUNCTION */
 pub async fn login_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    let state_string: &str = "PLEASE LOG IN";
-    let title: &str = "LOGIN";
+    let title: String = get_translation(
+        "login.title",
+        &user_req_data.lang,
+        None
+    );
+    let message: String = get_translation(
+        "login.message",
+        &user_req_data.lang,
+        None
+    );
 
-    let login_template = LoginTemplate {
-        message: state_string,
-        title: title,
+    let login_template: LoginTemplate<'_> = LoginTemplate {
+        message: &message,
+        title: &title,
         user: user_req_data
     };
 
@@ -1050,11 +1058,22 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
 /* REGISTER PAGE ROUTE FUNCTION */
 pub async fn register_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    let state_string: &str = "Please Register";
-    let title: &str = "REGISTER";
+
+    let message: String = get_translation(
+        "register.message",
+        &user_req_data.lang,
+        None
+    );
+
+    let title: String = get_translation(
+        "register.title",
+        &user_req_data.lang,
+        None
+    );
 
     let register_template: RegisterTemplate<'_> = RegisterTemplate {
-        message: state_string,title: title,
+        message: &message,
+        title: &title,
         user: user_req_data
     };
 
@@ -1077,7 +1096,16 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
         return redirect_resp;
     }
 
-    let title: &str = "ADMIN DASHBOARD";
+    let title: String = get_translation(
+        "admin_dash.title",
+        &user_req_data.lang,
+        None
+    );
+    let message: String = get_translation(
+        "admin_dash.message",
+        &user_req_data.lang,
+        None
+    );
 
     // Get client site references to list on admin site
     let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
@@ -1089,8 +1117,8 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
     };
 
     let admin_template: AdminTemplate = AdminTemplate {
-        title,
-        message: "Perform admin actions.",
+        title: &title,
+        message: &message,
         user: user_req_data,
         client_refs
     };
@@ -1119,9 +1147,21 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
         return redirect_resp;
     }
 
+    // Get translations
+    let title: String = get_translation(
+        "new_client.title",
+        &user_req_data.lang,
+        None
+    );
+    let message: String = get_translation(
+        "new_client.message",
+        &user_req_data.lang,
+        None
+    );
+
     let new_client_template: NewClientTemplate = NewClientTemplate {
-        title: "Add New Client Site",
-        message: "Add a new client site to the network.",
+        title: &title,
+        message: &message,
         user: user_req_data
     };
     HttpResponse::Ok()
@@ -1147,6 +1187,18 @@ pub async fn edit_client_site_form_page(
         return redirect_resp;
     }
 
+    // Get translations
+    let title: String = get_translation(
+        "edit_client.title",
+        &user_req_data.lang,
+        None
+    );
+    let message: String = get_translation(
+        "edit_client.message",
+        &user_req_data.lang,
+        None
+    );
+
     // Get the requested client site data
     let client_data_result: Result<Option<db::ClientData>, anyhow::Error> =
         db::get_client_by_client_id(&auth_id).await;
@@ -1158,8 +1210,8 @@ pub async fn edit_client_site_form_page(
     match client_data_result.unwrap() {
         Some(client_data) => {
             let new_client_template: EditClientTemplate = EditClientTemplate {
-                title: "Add New Client Site",
-                message: "Add a new client site to the network.",
+                title: &title,
+                message: &message,
                 user: user_req_data,
                 client_data
             };
@@ -1186,13 +1238,26 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
         return send_to_login();
     }
 
+    // Get translations
+    let title: String = get_translation(
+        "dash.title",
+        &user_req_data.lang,
+        None
+    );
+    let message: String = get_translation(
+        "dash.message",
+        &user_req_data.lang,
+        Some(&[&user_req_data.get_role()])
+    );
+
     let id: i32 = user_req_data.id.unwrap();
-    let title: &str = "DASHBOARD";
+
     match db::get_user_by_id(id).await {
         Ok(Some(user)) =>{
             let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
                 user_data: &user,
-                title,
+                title: &title,
+                message: &message,
                 user: user_req_data
             };
 
