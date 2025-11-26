@@ -26,6 +26,10 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Integrate payment APIs (probably with reqwest crate)
  * * Integrate Stripe for payments
  * * Accept crypto currency with a 3rd party API (like coinbase)
+ * Switch from Foundation to Bulma
+ * * https://bulma.io/documentation/columns/responsiveness/
+ * * This requires I do my own ARIA compliance stuff
+ * Replace TTFs with WOFF (FontSquirrel can generate them from TTF)
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
