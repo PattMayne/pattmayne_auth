@@ -13,6 +13,8 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Containerize with Docker
  * move env variable from .env to somewhere more secure for production
  * Remove magic strings from front-end JS. Put them in globals or resources file.
+ * * Use yaml files (flat style)
+ * * NO: use use phf::phf_map;  ( MUCH faster, though more verbose )
  * Make tests
  * When a person tries to register on a site, but they're already registered on another, just log them in
  * * This will create a refresh token for THAT site
