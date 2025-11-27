@@ -337,32 +337,16 @@ impl DashboardTexts {
         let title: String = get_translation("dash.title", &user_req_data.lang, None);
         let lang: &SupportedLangs = &user_req_data.lang;
 
-
         let message: String = get_translation(
-            "dash.greeting",
-            lang,
-            Some(&[&user_req_data.get_role()])
-        );
+            "dash.greeting", lang, Some(&[&user_req_data.get_role()]));
 
-        let first_name_label: String = 
-            get_translation("dash.firstname", lang,None);
-
-        let last_name_label: String = 
-            get_translation("dash.lastname", lang,None);
-
-        let password_label: String = 
-            get_translation("dash.password1",lang,None);
-
-        let confirm_password_label: String =
-            get_translation("dash.password2", lang, None);
-
-        let update_names_btn: String =
-            get_translation("dash.updatenames.btn", lang, None);
-
-        let update_password_btn: String =
-            get_translation("dash.updatepass.btn", lang, None);
-
-        let nav: NavTexts = NavTexts::new(&user_req_data.lang);
+        let first_name_label: String = get_translation("dash.firstname", lang,None);
+        let last_name_label: String = get_translation("dash.lastname", lang,None);
+        let password_label: String = get_translation("dash.password1",lang,None);
+        let confirm_password_label: String = get_translation("dash.password2", lang, None);
+        let update_names_btn: String = get_translation("dash.updatenames.btn", lang, None);
+        let update_password_btn: String = get_translation("dash.updatepass.btn", lang, None);
+        let nav: NavTexts = NavTexts::new(lang);
 
         DashboardTexts {
             title,
@@ -377,8 +361,6 @@ impl DashboardTexts {
         }
     }
 }
-
-
 
 
 
@@ -417,7 +399,6 @@ pub struct NavTexts {
     pub register: &'static str,
     pub logout: &'static str,
 }
-
 
 
 impl NavTexts {

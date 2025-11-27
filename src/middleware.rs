@@ -18,7 +18,8 @@
 use actix_web::{
     error, Error, HttpMessage,
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
-    middleware::{ Next } };
+    middleware::{ Next }
+};
 
 use crate::{ auth, db, utils };
 

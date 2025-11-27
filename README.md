@@ -31,9 +31,8 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * * This requires I do my own ARIA compliance stuff
  * Read language from header to create FR option in UserReqObj
  * Give user "lang" option in the DB
- * For pages with MANY translations/text:
- * * find a way to make ONE request that fills every value of a struct... so I get all the translations at once
- * * * so I don't need to make many small calls to get many text items.
+ * Front-end translations
+ * Error code translations
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
