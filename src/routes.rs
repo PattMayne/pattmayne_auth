@@ -24,10 +24,11 @@ use askama::Template;
 use serde::{ Deserialize, Serialize };
 
 // local modules, loaded as crates (declared as mods in main.rs)
-use crate::db;
-use crate::utils;
-use crate::auth::{self, UserReqData};
-use crate::resources::get_translation;
+use crate::{
+    db, utils,
+    auth::{ self, UserReqData },
+    resources::{ get_translation, NavTrans }
+};
 
 /* 
  * 
@@ -275,6 +276,7 @@ struct HomeTemplate<'a> {
     title: &'a str,
     message: &'a str,
     user: auth::UserReqData,
+    nav_trans: NavTrans,
 }
 
 
@@ -284,6 +286,7 @@ struct LoginTemplate<'a> {
     title: &'a str,
     message: &'a str,
     user: auth::UserReqData,
+    nav_trans: NavTrans,
 }
 
 #[derive(Template)]
@@ -293,6 +296,7 @@ struct AdminTemplate<'a> {
     message: &'a str,
     user: auth::UserReqData,
     client_refs: Vec<db::ClientRef>,
+    nav_trans: NavTrans,
 }
 
 
@@ -302,6 +306,7 @@ struct NewClientTemplate<'a> {
     user: auth::UserReqData,
     title: &'a str,
     message: &'a str,
+    nav_trans: NavTrans,
 }
 
 
@@ -311,7 +316,8 @@ struct EditClientTemplate<'a> {
     user: auth::UserReqData,
     title: &'a str,
     message: &'a str,
-    client_data: db::ClientData
+    client_data: db::ClientData,
+    nav_trans: NavTrans,
 }
 
 
@@ -321,6 +327,7 @@ struct RegisterTemplate<'a> {
     title: &'a str,
     message: &'a str,
     user: auth::UserReqData,
+    nav_trans: NavTrans,
 }
 
 
@@ -329,6 +336,7 @@ struct RegisterTemplate<'a> {
 struct ErrorTemplate<> {
     error_data: utils::ErrorData,
     user: auth::UserReqData,
+    nav_trans: NavTrans,
 }
 
 
@@ -339,6 +347,7 @@ struct DashboardTemplate<'a> {
     message: &'a str,
     user_data: &'a db::User,
     user: auth::UserReqData,
+    nav_trans: NavTrans,
 }
 
 
@@ -709,9 +718,6 @@ async fn update_client_post(
 
     // If string checks passed, enter into DB, generate secret, show admin secret
     if domains_are_valid && client_id_is_valid && name_is_valid {
-        let raw_client_secret: String = utils::generate_client_secret();
-        let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
-
         let client_data: db::UpdateClientData = db::UpdateClientData {
             site_domain: inputs.site_domain.to_owned(),
             site_name: inputs.site_name.to_owned(),
@@ -1007,7 +1013,8 @@ async fn home(req: HttpRequest) -> impl Responder {
     let home_template: HomeTemplate<'_> = HomeTemplate {
         message: &message,
         title: &title,
-        user: user_req_data
+        nav_trans: NavTrans::new(&user_req_data.lang),
+        user: user_req_data,
     };
 
     HttpResponse::Ok()
@@ -1045,6 +1052,7 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
     let login_template: LoginTemplate<'_> = LoginTemplate {
         message: &message,
         title: &title,
+        nav_trans: NavTrans::new(&user_req_data.lang),
         user: user_req_data
     };
 
@@ -1074,6 +1082,7 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
     let register_template: RegisterTemplate<'_> = RegisterTemplate {
         message: &message,
         title: &title,
+        nav_trans: NavTrans::new(&user_req_data.lang),
         user: user_req_data
     };
 
@@ -1119,6 +1128,7 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
     let admin_template: AdminTemplate = AdminTemplate {
         title: &title,
         message: &message,
+        nav_trans: NavTrans::new(&user_req_data.lang),
         user: user_req_data,
         client_refs
     };
@@ -1162,6 +1172,7 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
     let new_client_template: NewClientTemplate = NewClientTemplate {
         title: &title,
         message: &message,
+        nav_trans: NavTrans::new(&user_req_data.lang),
         user: user_req_data
     };
     HttpResponse::Ok()
@@ -1212,6 +1223,7 @@ pub async fn edit_client_site_form_page(
             let new_client_template: EditClientTemplate = EditClientTemplate {
                 title: &title,
                 message: &message,
+                nav_trans: NavTrans::new(&user_req_data.lang),
                 user: user_req_data,
                 client_data
             };
@@ -1245,7 +1257,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
         None
     );
     let message: String = get_translation(
-        "dash.message",
+        "dash.greeting",
         &user_req_data.lang,
         Some(&[&user_req_data.get_role()])
     );
@@ -1258,6 +1270,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
                 user_data: &user,
                 title: &title,
                 message: &message,
+                nav_trans: NavTrans::new(&user_req_data.lang),
                 user: user_req_data
             };
 
@@ -1297,6 +1310,7 @@ async fn error_page(req: HttpRequest, path: web::Path<String>) -> HttpResponse {
 
     let error_template: ErrorTemplate<> = ErrorTemplate {
         error_data,
+        nav_trans: NavTrans::new(&user_req_data.lang),
         user: user_req_data
     };
 

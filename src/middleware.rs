@@ -20,7 +20,7 @@ use actix_web::{
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
     middleware::{ Next } };
 
-use crate::{auth, db, utils};
+use crate::{ auth, db, utils };
 
 
 pub struct NewJwtObj {
@@ -36,7 +36,24 @@ impl NewJwtObj {
 }
 
 
-/* MIDDLEWARE FUNCTIONS */
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ============================
+ * ============================
+ * =====                  =====
+ * =====  PRE-PROCESSING  =====
+ * =====                  =====
+ * ============================
+ * ============================
+ * 
+ * 
+ * 
+ * 
+*/
+
 
 /**
  * Pre-processing to make user data available for all routes.
@@ -61,36 +78,6 @@ pub async fn login_status_middleware(
     // Put UserReqData into the request object to identify user to all routes.
     req.extensions_mut().insert(user_req_data);
     next.call(req).await
-}
-
-
-/**
- * Post-processing middleware to catch a "make new JWT" flag,
- * then make a new JWT and put it in a cookie in the response.
- */
-pub async fn jwt_cookie_middleware<B>(
-    req: ServiceRequest,
-    next: Next<B>,
-) -> Result<ServiceResponse<B>, Error> where B: MessageBody, {
-    let mut res: ServiceResponse<B> = next.call(req).await?;
-
-    let new_jwt: Option<String> = res
-        .request()
-        .extensions()
-        .get::<NewJwtObj>()
-        .map(|obj| obj.get_token().to_owned());
-
-    // After handler, check for the NewJwt flag and add cookie if present
-    if let Some(token) = new_jwt {
-        let cookie: actix_web::cookie::Cookie<'_> =
-            auth::build_token_cookie(
-                token,
-                String::from("jwt")
-            );
-
-        res.response_mut().add_cookie(&cookie).ok();
-    }
-    Ok(res)
 }
 
 
@@ -173,3 +160,55 @@ async fn get_user_req_data_from_opt(
         auth::JwtVerification::Invalid => Ok(guest_data)
     }
 }
+
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * =============================
+ * =============================
+ * =====                   =====
+ * =====  POST-PROCESSING  =====
+ * =====                   =====
+ * =============================
+ * =============================
+ * 
+ * 
+ * 
+ * 
+*/
+
+
+/**
+ * Post-processing middleware to catch a "make new JWT" flag,
+ * then make a new JWT and put it in a cookie in the response.
+ */
+pub async fn jwt_cookie_middleware<B>(
+    req: ServiceRequest,
+    next: Next<B>,
+) -> Result<ServiceResponse<B>, Error> where B: MessageBody, {
+    let mut res: ServiceResponse<B> = next.call(req).await?;
+
+    let new_jwt: Option<String> = res
+        .request()
+        .extensions()
+        .get::<NewJwtObj>()
+        .map(|obj| obj.get_token().to_owned());
+
+    // After handler, check for the NewJwt flag and add cookie if present
+    if let Some(token) = new_jwt {
+        let cookie: actix_web::cookie::Cookie<'_> =
+            auth::build_token_cookie(
+                token,
+                String::from("jwt")
+            );
+
+        res.response_mut().add_cookie(&cookie).ok();
+    }
+    Ok(res)
+}
+
+
