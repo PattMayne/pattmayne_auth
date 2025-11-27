@@ -29,7 +29,8 @@ use crate::{
     auth::{ self, UserReqData },
     resource_mgr::{
         HomeTexts, LoginTexts, RegisterTexts, AdminTexts,
-        ErrorTexts, EditClientTexts, NewClientTexts, DashboardTexts
+        ErrorTexts, EditClientTexts, NewClientTexts, DashboardTexts,
+        ErrorData
      }
 };
 
@@ -325,7 +326,7 @@ struct RegisterTemplate {
 #[derive(Template)]
 #[template(path ="error.html")]
 struct ErrorTemplate {
-    error_data: utils::ErrorData,
+    error_data: ErrorData,
     user: auth::UserReqData,
     texts: ErrorTexts,
 }
@@ -1200,12 +1201,15 @@ pub async fn not_found() -> impl Responder {
 async fn error_page(req: HttpRequest, path: web::Path<String>) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    let code_u16 = match path.into_inner().parse::<u16>() {
+    let code: String = match path.into_inner().parse::<String>() {
         Ok(code) => code,
-        Err(_) => 400
+        Err(_) => "400".to_string()
     };
 
-    let error_data: utils::ErrorData = utils::ErrorData::new(code_u16);
+    let error_data: ErrorData = ErrorData::new(
+        code,
+        &user_req_data.lang
+    );
 
     let error_template: ErrorTemplate<> = ErrorTemplate {
         error_data,

@@ -13,8 +13,11 @@
  * 
  * 
  * Gather translations into structs in this script
- * to keep that login out of the routes script.
+ * to keep that logic out of the routes script.
  * 
+ * Some pages or templates require custom functions
+ * to build their structs.
+ * Most can simply use the get_translation function.
  * 
  * 
 */
@@ -22,7 +25,7 @@
 
 use crate::{
     auth::UserReqData,
-    resources::{ get_translation, raw_trans_or_missing },
+    resources::{ get_translation, raw_trans_or_missing, TRANSLATIONS },
     utils::SupportedLangs
 };
 
@@ -61,13 +64,13 @@ pub struct HomeTexts {
 
 impl HomeTexts {
     pub fn new(user_req_data: &UserReqData) -> HomeTexts {
-        let title: String = get_translation("home.title", &user_req_data.lang, None);
+        let lang: &SupportedLangs = &user_req_data.lang;
+        let title: String = get_translation("home.title", lang, None);
         let message: String = get_translation(
             "home.greeting",
-            &user_req_data.lang,
-            Some(&[&user_req_data.get_role()])
-        );
-        let nav = NavTexts::new(&user_req_data.lang);
+            lang,
+            Some(&[&user_req_data.get_role()]));
+        let nav = NavTexts::new(lang);
 
         HomeTexts {
             title,
@@ -265,7 +268,6 @@ impl EditClientTexts {
         let lang: &SupportedLangs = &user_req_data.lang;
         let title: String = get_translation("edit_client.title", &user_req_data.lang, None);
         let message: String = get_translation("edit_client.message", lang, None);
-        let nav = NavTexts::new(&user_req_data.lang);
         let domain: String = get_translation("clientform.domain", lang, None);
         let name: String = get_translation("clientform.name", lang, None);
         let id: String = get_translation("clientform.id", lang, None);
@@ -277,6 +279,7 @@ impl EditClientTexts {
         let is_active: String = get_translation("clientform.isactive", lang, None);
         let save_btn: String = get_translation("clientform.save_changes", lang, None);
         let new_scret_btn: String = get_translation("clientform.gen_secret", lang, None);
+        let nav = NavTexts::new(lang);
 
 
         EditClientTexts {
@@ -380,12 +383,6 @@ impl DashboardTexts {
  * 
  * 
  * 
-*/
-
-
-
-
-/**
  * The top-nav bar is loaded on every page, so here is a struct to gather
  * all of its button translations together.
  * They can be static references because they will never build by replacing
@@ -431,6 +428,76 @@ impl NavTexts {
             login,
             register,
             logout,
+        }
+    }
+}
+
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * =========================
+ * =========================
+ * =====               =====
+ * =====  ERROR CODES  =====
+ * =====               =====
+ * =========================
+ * =========================
+ * 
+ * 
+ * 
+ * Custom logic to get Error page text.
+ * The "custom" part is getting default data for
+ * unknown or invalid error codes.
+ * 
+*/
+
+
+// Text for Error page
+pub struct ErrorData {
+    pub code: String,
+    pub title: &'static str,
+    pub message: &'static str,
+}
+
+impl ErrorData {
+    pub fn new(code: String, lang: &SupportedLangs) -> Self {
+        let lang_suffix: &str = lang.suffix();
+        let title_key: String = format!("{}.{}.{}.{}", "err", code, "title", lang_suffix);
+        let body_key: String = format!("{}.{}.{}.{}", "err", code, "body", lang_suffix);
+
+        // Get the option first so we can check if it's a known error code
+        let title_option: Option<&&str> = TRANSLATIONS.get(title_key.as_str());
+        let body_option: Option<&&str> = TRANSLATIONS.get(body_key.as_str());
+
+        // Just hardcode the missing errors here
+        if title_option.is_none() || body_option.is_none() {
+            match lang {
+                SupportedLangs::English => {
+                    return ErrorData {
+                        code: code,
+                        title: "Unknown Error",
+                        message: "An unknown error has occurred.",
+                    };
+                },
+                SupportedLangs::French => {
+                    return ErrorData {
+                        code: code,
+                        title: "Erreur inconnue",
+                        message: "Une erreur inconnue s'est produite.",
+                    };
+                }
+            }
+        }
+
+        // The error code is known, text is retrieved. Create and return struct.
+        ErrorData {
+            code: code,
+            title: title_option.unwrap(),
+            message: body_option.unwrap(),
         }
     }
 }

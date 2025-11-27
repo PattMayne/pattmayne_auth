@@ -45,7 +45,7 @@ Refresh tokens are stored in a refresh_tokens table in the DB. Refresh token ent
 For most requests the user makes on the client site, they do NOT need to interact with the auth app (this app). Client apps have some autonomy.
 
 ### RESOURCES FILE
-* Create a phf::phf_map! list of values, french and english
-* Set a language struct in the req with middleware
-* * maybe also use a lang enum which maps to "en" "fr" "el"
-* Retrieve values like home.title with a function that auto-contatenates the .en language choice
+* French and English valies are stored in a phf::phf_map!
+* * keys are all static string slice references
+* Lang field in UserReqData dictates which language version to use
+* Each Askama html template has a dedicated struct for all text
