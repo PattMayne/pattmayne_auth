@@ -30,7 +30,7 @@
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                Site Domain:
+                                {{ texts.domain }}
                                 <input
                                     id="site_domain"
                                     name="site_domain"
@@ -40,7 +40,7 @@
                             </label>
 
                             <label>
-                                Site Name (Public facing title):
+                                {{ texts.name }}
                                 <input
                                     id="site_name"
                                     name="site_name"
@@ -50,7 +50,7 @@
                             </label>
 
                             <label>
-                                Client ID (random unique public identifier):
+                                {{ texts.id }}
                                 <input
                                     id="client_id"
                                     name="client_id"
@@ -63,7 +63,7 @@
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                Redirect URI:                                    
+                                {{ texts.red_uri }}                                
                                 <input
                                     id="redirect_uri"
                                     name="redirect_uri"
@@ -73,7 +73,7 @@
                             </label>
 
                             <label>
-                                Logo URL:
+                                {{ texts.logo_url }}
                                 <input
                                     id="logo_url"
                                     name="logo_url"
@@ -83,7 +83,7 @@
                             </label>
                             
                             <label>
-                                Type:
+                                {{ texts.cli_type }}
                                 <select id="client_type" name="client_type">
                                     <option
                                         value="confidential"
@@ -107,7 +107,7 @@
                             </label>
 
                             <label>
-                                Type:
+                                {{ texts.cat }}
                                 <select id="category" name="category">
                                     <option
                                         value="game"
@@ -133,7 +133,7 @@
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                Description (public facing):
+                                {{ texts.desc }}
                                 <textarea
                                     id="description"
                                     name="description"
@@ -142,7 +142,7 @@
                             </label>
 
                             <label>
-                                Is Active:
+                                {{ texts.is_active }}
                                 <input
                                     type="checkbox"
                                     id="is_active"
@@ -152,10 +152,12 @@
                             </label>
                         </div>
                         <div class="large-12 cell">
-                            <a class="button small" onclick="submit_data()">SAVE CHANGES</a>
+                            <a class="button small"
+                                onclick="submit_data()">{{ texts.save_btn }}</a>
                         </div>
                         <div class="large-12 cell">
-                            <a class="button small" onclick="request_new_secret()">GENERATE NEW SECRET</a>
+                            <a class="button small"
+                                onclick="request_new_secret()">{{ texts.new_scret_btn }}</a>
                         </div>
                     </div>
                </div>

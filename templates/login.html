@@ -31,16 +31,20 @@
                             <div class="large-4 medium-6 small-12 cell">
                                 <h4>{{ texts.title }}</h4>
                                 <label>
-                                    Username or Email:
-                                    <input id="username_or_email" name="username_or_email" type="text" />
+                                    {{ texts.username_email }}
+                                    <input
+                                        id="username_or_email"
+                                        name="username_or_email"
+                                        type="text" />
                                 </label>
 
                                 <label>
-                                    Password:
+                                    {{ texts.password }}
                                     <input id="password" name="password" type="password" />
                                 </label>
 
-                                <a class="button small" onclick="submit_login()">LOGIN</a>
+                                <a class="button small"
+                                    onclick="submit_login()">{{ texts.login_btn }}</a>
                             </div>
                             <div class="large-4 medium-3 cell hide-for-small-only">
                                 &nbsp;

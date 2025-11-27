@@ -30,34 +30,34 @@
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                New Site Domain:
+                                {{ texts.domain }}
                                 <input id="site_domain" name="site_domain" type="text" />
                             </label>
 
                             <label>
-                                New Site Name (Public facing title):
+                                {{ texts.name }}
                                 <input id="site_name" name="site_name" type="text" />
                             </label>
 
                             <label>
-                                Client ID (random unique public identifier):
+                                {{ texts.id }}
                                 <input id="client_id" name="client_id" type="text" />
                             </label>
 
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                Redirect URI:                                    
+                                {{ texts.red_uri }}
                                 <input id="redirect_uri" name="redirect_uri" type="text" />
                             </label>
 
                             <label>
-                                Logo URL:
+                                {{ texts.logo_url }}
                                 <input id="logo_url" name="logo_url" type="text" />
                             </label>
                             
                             <label>
-                                Auth Type:
+                                {{ texts.cli_type }}
                                 <select id="client_type" name="client_type">
                                     <option value="confidential" selected>Confidential</option>
                                     <option value="public">Public</option>
@@ -66,7 +66,7 @@
                             </label>
 
                             <label>
-                                App Category:
+                                {{ texts.cat }}
                                 <select id="category" name="category">
                                     <option value="game" selected>Game</option>
                                     <option value="service">Service</option>
@@ -78,17 +78,18 @@
                         </div>
                         <div class="large-4 medium-4 small-12 cell">
                             <label>
-                                Description (public facing):
-                                <textarea id="description" name="description" style="height: 200px;"></textarea>
+                                {{ texts.desc }}
+                                <textarea id="description" name="description" style="height: 200px;">
+                                </textarea>
                             </label>
 
                             <label>
-                                Is Active:
+                                {{ texts.is_active }}
                                 <input type="checkbox" id="is_active" name="is_active" checked>
                             </label>
                         </div>
                         <div class="large-12 cell">
-                            <a class="button small" onclick="submit_data()">SUBMIT</a>
+                            <a class="button small" onclick="submit_data()">{{texts.submit_btn}}</a>
                         </div>
                     </div>
                </div>

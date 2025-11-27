@@ -31,22 +31,23 @@
                             <div class="large-4 medium-6 small-12 cell">
                                 <h4>{{ texts.title }}</h4>
                                 <label>
-                                    Username:
+                                    {{ texts.username }}
                                     <input id="username" name="username" type="text" />
                                 </label>
 
                                 <label>
-                                    Email:
+                                    {{ texts.email }}
                                     <input id="email" name="email" type="text" />
                                 </label>
 
 
                                 <label>
-                                    Password:
+                                    {{ texts.password }}
                                     <input id="password" name="password" type="password" />
                                 </label>
 
-                                <a class="button small" onclick="submit_register()">REGISTER</a>
+                                <a class="button small"
+                                    onclick="submit_register()">{{ texts.register_btn }}</a>
                             </div>
                             <div class="large-4 medium-3 cell hide-for-small-only">
                                 &nbsp;

@@ -34,7 +34,7 @@
                             <div class="large-4 medium-6 cell hide-for-small-only">
 
                                 <label>
-                                    First Name:
+                                    {{ texts.first_name_label }}
                                     <input
                                         id="first_name"
                                         name="first_name"
@@ -44,7 +44,7 @@
                                 </label>
 
                                 <label>
-                                    Last Name:
+                                    {{ texts.last_name_label }}
                                     <input
                                         id="last_name"
                                         name="last_name"
@@ -54,14 +54,14 @@
                                 </label>
 
                                 <a class="button small" onclick="save_names()">
-                                    UPDATE NAMES
+                                    {{ texts.update_names_btn }}
                                 </a>
 
                             </div>
                             <div class="large-4 medium-6 small-12 cell">
                                 
                                 <label>
-                                    New Password:
+                                    {{ texts.password_label }}
                                     <input
                                         id="new_password"
                                         name="new_password"
@@ -70,7 +70,7 @@
                                 </label>
 
                                 <label>
-                                    Confirm New Password:
+                                    {{ texts.confirm_password_label }}
                                     <input
                                         id="new_password_confirm"
                                         name="new_password_confirm"
@@ -79,7 +79,7 @@
                                 </label>
 
                                 <a class="button small" onclick="save_password()">
-                                    UPDATE PASSWORD
+                                    {{ texts.update_password_btn }}
                                 </a>
                                 
                             </div>

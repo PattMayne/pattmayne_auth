@@ -46,6 +46,20 @@ static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "dash.title.en" => "DASHBOARD",
     "dash.greeting.en" => "Edit your details, {0}!",
     "dash.greeting.fr" => "Modifiez vos informations, {0}!",
+    // DASHBOARD LABELS
+    "dash.firstname.en" => "First Name:",
+    "dash.firstname.fr" => "Prénom:",
+    "dash.lastname.en" => "Last Name:",
+    "dash.lastname.fr" => "Nom:",
+    "dash.password1.en" => "New Password:",
+    "dash.password1.fr" => "Nouveau mot de passe :",
+    "dash.password2.en" => "Confirm Password:",
+    "dash.password2.fr" => "Confirmer le mot de passe:",
+    // DASHBOARD BUTTONS
+    "dash.updatenames.btn.en" => "UPDATE NAMES",
+    "dash.updatenames.btn.fr" => "MAJ NOMS",
+    "dash.updatepass.btn.en" => "UPDATE PASSWORD",
+    "dash.updatepass.btn.fr" => "MAJ MOT DE PASSE",
 
     // ADMIN DASHBOARD PAGE
     "admin.title.en" => "ADMIN HOME",
@@ -54,23 +68,41 @@ static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "admin.message.fr" => "Effectuer des actions administratives",
     "admin.actions.label.en" => "ADMIN ACTIONS",
     "admin.actions.label.fr" => "ACTIONS ADMIN",
-    "admin.editsites.label.en" => "EDIT CLIENT SITES",
-    "admin.editsites.label.fr" => "MODIFIER LES SITES CLIENTS",
+    "admin.editclients.label.en" => "EDIT CLIENT SITES",
+    "admin.editclients.label.fr" => "MODIFIER LES SITES CLIENTS",
     "admin.newclient.btn.en" => "ADD NEW CLIENT",
     "admin.newclient.btn.fr" => "AJOUTEZ SITE CLIENT",
 
 
-    //LOGIN PAGE
+    // LOGIN PAGE
     "login.title.en" => "LOGIN",
-    "login.title.fr" => "ACCUEIL ADMINISTRATIF",
+    "login.title.fr" => "ACCUEIL",
     "login.message.en" => "Please Log In",
     "login.message.fr" => "Veuillez vous connecter",
+    // LOGIN LABELS
+    "login.username.email.label.en" => "Username or Email:",
+    "login.username.email.label.fr" => "Nom d'utilisateur ou e-mail:",
+    "login.password.label.en" => "Password:",
+    "login.password.label.fr" => "Mot de passe:",
+    // LOGIN BUTTONS
+    "login.btn.en" => "LOGIN",
+    "login.btn.fr" => "ACCUEIL",
 
-    //REGISTER PAGE
+    // REGISTER PAGE
     "register.title.en" => "REGISTER",
     "register.title.fr" => "INSCRIPTION",
     "register.message.en" => "Please register",
     "register.message.fr" => "Veuillez vous connecter",
+    // REGISTER LABELS
+    "register.username.label.en" => "Username:",
+    "register.username.label.fr" => "Nom d'utilisateur:",
+    "register.email.label.en" => " Email:",
+    "register.email.label.fr" => "E-mail:",
+    "register.password.label.en" => "Password:",
+    "register.password.label.fr" => "Mot de passe:",
+    // REGISTER BUTTONS
+    "register.btn.en" => "REGISTER",
+    "register.btn.fr" => "INSCRIPTION",
 
     // NEW CLIENT SITE
     "new_client.title.en" => "NEW CLIENT SITE",
@@ -83,6 +115,33 @@ static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "edit_client.title.fr" => "MODIFIER LE SITE DU CLIENT",
     "edit_client.message.en" => "Update existing client.",
     "edit_client.message.fr" => "Mettez à jour le client existant.",
+
+    // CLIENT FORM LABELS (for both NEW and EDIT)
+    "clientform.domain.en" => "Site Domain:",
+    "clientform.domain.fr" => "Domaine du site:",
+    "clientform.name.en" => "Site Name (public-facing title):",
+    "clientform.name.fr" => "Nom du site (titre public) :",
+    "clientform.id.en" => "Client ID (random unique identifier):",
+    "clientform.id.fr" => "Client ID (unique identifier aléatoire):",
+    "clientform.red_uri.en" => "Redirect URI:",
+    "clientform.red_uri.fr" => "Redirection URI :",
+    "clientform.logo_url.en" => "Logo URL:",
+    "clientform.logo_url.fr" => "URL du logo :",
+    "clientform.type.en" => "Type:",
+    "clientform.type.fr" => "Type:",
+    "clientform.cat.en" => "Category:",
+    "clientform.cat.fr" => "Catégorie:",
+    "clientform.desc.en" => "Description:",
+    "clientform.desc.fr" => "Description:",
+    "clientform.isactive.en" => "Is Active:",
+    "clientform.isactive.fr" => "Est actif:",
+    // CLIENT FORM BUTTONS
+    "clientform.submit.en" => "SUBMIT",
+    "clientform.submit.fr" => "SUBMIT",
+    "clientform.save_changes.en" => "SUBMIT",
+    "clientform.save_changes.fr" => "ENVOYER",
+    "clientform.gen_secret.en" => "GENERATE NEW SECRET",
+    "clientform.gen_secret.fr" => "GÉNÉRER UN NOUVEAU SECRET",
 
     // NAV BUTTONS
     "nav.home.en" => "HOME",

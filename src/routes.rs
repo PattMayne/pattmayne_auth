@@ -27,9 +27,8 @@ use serde::{ Deserialize, Serialize };
 use crate::{
     db, utils,
     auth::{ self, UserReqData },
-    resources::{ get_translation },
     resource_mgr::{
-        NavTexts, HomeTexts, LoginTexts, RegisterTexts, AdminTexts,
+        HomeTexts, LoginTexts, RegisterTexts, AdminTexts,
         ErrorTexts, EditClientTexts, NewClientTexts, DashboardTexts
      }
 };
@@ -993,10 +992,8 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
 async fn home(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
-    let home_texts: HomeTexts = HomeTexts::new(&user_req_data);
-
     let home_template: HomeTemplate = HomeTemplate {
-        texts: home_texts,
+        texts: HomeTexts::new(&user_req_data),
         user: user_req_data,
     };
 
@@ -1021,10 +1018,9 @@ pub fn redirect_to_err(err_code: String) -> impl Responder {
 /* LOGIN PAGE ROUTE FUNCTION */
 pub async fn login_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    let texts = LoginTexts::new(&user_req_data);
 
     let login_template: LoginTemplate = LoginTemplate {
-        texts,
+        texts: LoginTexts::new(&user_req_data),
         user: user_req_data
     };
 
@@ -1038,10 +1034,9 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
 /* REGISTER PAGE ROUTE FUNCTION */
 pub async fn register_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-    let texts: RegisterTexts = RegisterTexts::new(&user_req_data);
 
     let register_template: RegisterTemplate = RegisterTemplate {
-        texts,
+        texts: RegisterTexts::new(&user_req_data),
         user: user_req_data
     };
 
@@ -1064,8 +1059,6 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
         return redirect_resp;
     }
     
-    let texts: AdminTexts = AdminTexts::new(&user_req_data);
-
     // Get client site references to list on admin site
     let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
         Ok(refs) => refs,
@@ -1076,7 +1069,7 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
     };
 
     let admin_template: AdminTemplate = AdminTemplate {
-        texts,
+        texts: AdminTexts::new(&user_req_data),
         user: user_req_data,
         client_refs
     };
