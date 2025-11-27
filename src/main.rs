@@ -11,6 +11,7 @@ mod utils;
 mod auth;
 mod middleware;
 mod resources;
+mod resource_mgr;
 
 /**
  * The main function logs all the routes as routes or "services".

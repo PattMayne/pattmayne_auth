@@ -28,55 +28,6 @@ use crate::utils::SupportedLangs;
 
 
 /**
- * The top-nav bar is loaded on every page, so here is a struct to gather
- * all of its button translations together.
- */
-pub struct NavTrans {
-    pub home: &'static str,
-    pub admin: &'static str,
-    pub dashboard: &'static str,
-    pub login: &'static str,
-    pub register: &'static str,
-    pub logout: &'static str,
-}
-
-
-
-impl NavTrans {
-
-    /**
-     * Just pass in a language to the constructor and get the right language version
-     * of all the strings for the top-nav buttons.
-     */
-    pub fn new(lang: &SupportedLangs) -> NavTrans {
-        let lang_suffix: &str = lang.suffix();
-
-        let home_key: String = format!("{}.{}", "nav.home", lang_suffix);
-        let admin_key: String = format!("{}.{}", "nav.admin", lang_suffix);
-        let dash_key: String = format!("{}.{}", "nav.dashboard", lang_suffix);
-        let login_key: String = format!("{}.{}", "nav.login", lang_suffix);
-        let register_key: String = format!("{}.{}", "nav.register", lang_suffix);
-        let logout_key: String = format!("{}.{}", "nav.logout", lang_suffix);
-
-        let home: &'static str = get_trans_or_missing(home_key.as_str(), lang);
-        let admin: &'static str = get_trans_or_missing(admin_key.as_str(), lang);
-        let dashboard: &'static str = get_trans_or_missing(dash_key.as_str(), lang);
-        let login: &'static str = get_trans_or_missing(login_key.as_str(), lang);
-        let register: &'static str = get_trans_or_missing(register_key.as_str(), lang);
-        let logout: &'static str = get_trans_or_missing(logout_key.as_str(), lang);
-
-        NavTrans {
-            home,
-            admin,
-            dashboard,
-            login,
-            register,
-            logout,
-        }
-    }
-}
-
-/**
  * Text strings to use on website.
  * Placeholders must be NUMBERED starting with ZERO:
  * ie:  Hello, {0}! I hope you're having a good {1}!
@@ -97,10 +48,17 @@ static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "dash.greeting.fr" => "Modifiez vos informations, {0}!",
 
     // ADMIN DASHBOARD PAGE
-    "admin_dash.title.en" => "ADMIN HOME",
-    "admin_dash.title.fr" => "TABLEAU DE BORD ADMIN",
-    "admin_dash.message.en" => "Perform admin actions",
-    "admin_dash.message.fr" => "Effectuer des actions administratives",
+    "admin.title.en" => "ADMIN HOME",
+    "admin.title.fr" => "TABLEAU DE BORD ADMIN",
+    "admin.message.en" => "Perform admin actions",
+    "admin.message.fr" => "Effectuer des actions administratives",
+    "admin.actions.label.en" => "ADMIN ACTIONS",
+    "admin.actions.label.fr" => "ACTIONS ADMIN",
+    "admin.editsites.label.en" => "EDIT CLIENT SITES",
+    "admin.editsites.label.fr" => "MODIFIER LES SITES CLIENTS",
+    "admin.newclient.btn.en" => "ADD NEW CLIENT",
+    "admin.newclient.btn.fr" => "AJOUTEZ SITE CLIENT",
+
 
     //LOGIN PAGE
     "login.title.en" => "LOGIN",
@@ -120,7 +78,7 @@ static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "new_client.message.en" => "Add a new client site to the network.",
     "new_client.message.fr" => "Ajoutez un nouveau site client au réseau.",
 
-    // NEW CLIENT SITE
+    // EDIT CLIENT SITE
     "edit_client.title.en" => "EDIT CLIENT SITE",
     "edit_client.title.fr" => "MODIFIER LE SITE DU CLIENT",
     "edit_client.message.en" => "Update existing client.",
@@ -192,7 +150,7 @@ pub fn get_translation(
  * which do NOT have placeholders.
  * Primarily for the nav translations.
  */
-fn get_trans_or_missing(
+pub fn raw_trans_or_missing(
     key: &str,
     lang: &SupportedLangs
 ) -> &'static str {

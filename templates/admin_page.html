@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ title }}</title>
+        <title>{{ texts.title }}</title>
         <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
         <link rel="stylesheet" href="/static/css/foundation.css">
         <link rel="stylesheet" href="/static/css/app.css">
@@ -16,9 +16,9 @@
     <div class="grid-container">
         <div class="grid-x grid-padding-x">
             <div class="large-12 cell">
-                <h1>{{ title }}</h1>
+                <h1>{{ texts.title }}</h1>
                 <p>
-                    {{ message }}
+                    {{ texts.message }}
                 </p>
             </div>
 
@@ -29,9 +29,11 @@
 
                     <h6>Edit Client Sites</h6>
                     {% for client_ref in client_refs  %}
-                        <a href="/admin/edit_client/{{ client_ref.client_id }}" class="button small">{{ client_ref.name }}</a>
+                        <a href="/admin/edit_client/{{ client_ref.client_id }}" class="button small">
+                            {{ client_ref.name }}
+                        </a>
                     {% endfor %}
-                    <p><i>...list of clients will go here...</i> we will send in a vec of client objs... ids and names... and a page to edit them all</p>
+                    <br/>
                     <a href="/admin/new_client" class="button small">ADD NEW CLIENT</a>
                 </div>
 
