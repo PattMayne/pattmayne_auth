@@ -32,7 +32,7 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Read language from header to create FR option in UserReqObj
  * Give user "lang" option in the DB
  * Front-end translations
- * Error code translations
+ * * Including errors sent back in JSON in routes.rs
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
