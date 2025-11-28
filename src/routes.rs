@@ -572,7 +572,7 @@ async fn new_client_post(
         println!("CLIENT ID is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Client ID must be 2 to 20 characters with no spaces"),
+                error: String::from("Client ID: 2-20 characters, no spaces"),
                 code: 406
             });
     }
@@ -586,7 +586,7 @@ async fn new_client_post(
         println!("NAME is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Site name must be 2 to 20 characters."),
+                error: String::from("Site name: 2-20 characters."),
                 code: 406
             });
     }
@@ -641,7 +641,7 @@ async fn new_client_post(
     } else {
         HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Bad Inputs"),
+                error: String::from("Invalid Inputs"),
                 code: 406
             })
     }
@@ -697,7 +697,7 @@ async fn update_client_post(
         println!("CLIENT ID is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Client ID must be 2 to 20 characters with no spaces"),
+                error: String::from("Site name: 2-20 characters."),
                 code: 406
             });
     }
@@ -711,7 +711,7 @@ async fn update_client_post(
         println!("NAME is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Site name must be 2 to 20 characters."),
+                error: String::from("Site name: 2-20 characters."),
                 code: 406
             });
     }
@@ -758,7 +758,7 @@ async fn update_client_post(
     } else {
         HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
-                error: String::from("Bad Inputs"),
+                error: String::from("Invalid Inputs"),
                 code: 406
             })
     }
@@ -776,7 +776,7 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
     // generate JWT. Don't send user obj (with password) back
     let jwt_err_500 = HttpResponse::InternalServerError().json(
         ErrorResponse {
-            error: String::from("Error generating access token."),
+            error: String::from("Access Token Generation Error."),
             code: 500
     });
 
