@@ -61,6 +61,7 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::new_client_post)
                     .service(routes::update_client_post)
                     .service(routes::edit_client_site_form_page)
+                    .service(routes::req_secret_post)
             )
             .default_service(web::get().to(routes::not_found)) // <- catch-all
             .wrap(from_fn(middleware::jwt_cookie_middleware))

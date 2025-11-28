@@ -74,7 +74,7 @@ const submit_data = async () => {
                     }
                 })
 
-                throw new Error("Could not add client site, or server error.")
+                throw new Error("Could not edit client site, or server error.")
             }
             return response.json()
     }).then(data => {
@@ -86,6 +86,28 @@ const submit_data = async () => {
         msgs.push(message)
         show_msg_box()
     })
+}
+
+
+const request_new_secret = async () => {
+    const route = "/admin/req_new_client_secret"
+    const client_id = document.getElementById("client_id").value.trim()
+    const data = { "client_id": client_id };
+
+    await utils.fetch_json_post(route, data)
+        .then(response => {
+            if (!response.ok) {
+                console.log("DEAL WITH ERROR")
+                throw new Error("DEAL WITH ERROR")
+            }
+            
+            // response is good. Process good response in next then() link
+            return response.json()
+        }).then(data =>{
+            if (!!data.raw_client_secret) {
+                console.log("NEW SECRET: " + data.raw_client_secret)
+            }
+        })
 }
 
 
@@ -112,3 +134,4 @@ document.addEventListener('DOMContentLoaded', () => hide_msg_box())
 
 // Make functions available to the HTML elements (via window)
 window.submit_data = submit_data
+window.request_new_secret = request_new_secret

@@ -183,6 +183,11 @@ impl SendToError {
  */
 
 
+#[derive(Deserialize)]
+struct ClientId {
+    client_id: String,
+}
+
 // Store credentials when user tries to register
 #[derive(Deserialize)]
 struct RegisterCredentials {
@@ -525,6 +530,33 @@ async fn login_post(
 }
 
 
+#[post("/req_new_client_secret")]
+async fn req_secret_post(
+    req: HttpRequest,
+    inputs: web::Json<ClientId>
+) -> HttpResponse {
+    println!("Seeking new Secret");
+    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+    // check if they're admin
+    if let Some(redirect_resp) = redirect_non_admin(&user_req_data, &req) {
+        return redirect_resp;
+    }
+
+    let raw_client_secret_json: RawClientSecret = RawClientSecret {
+        raw_client_secret: utils::generate_client_secret()
+    };
+
+    let hashed_client_secret = db::hash_password(
+       raw_client_secret_json.raw_client_secret.to_owned()
+    ).to_owned();
+
+    // Now save the hashed version to the DB and send the raw version to admin.
+    // BUT FOR NOW let's just return the raw one for that flow to work, THEN incorporate the DB
+    HttpResponse::Ok()
+        .json(raw_client_secret_json)    
+}
+
+
 /**
  * The post route for adding new CLIENT SITE to the database.
  * Checks that the user is truly an admin, checks that all the 
@@ -624,7 +656,6 @@ async fn new_client_post(
                 } else {
                     return return_internal_err_json();
                 }
-
             },
             Err(e) => {
                 // Database error
@@ -636,8 +667,6 @@ async fn new_client_post(
                     })
             }
         }
-
-        
     } else {
         HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
