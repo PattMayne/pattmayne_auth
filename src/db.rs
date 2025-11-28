@@ -646,10 +646,30 @@ pub async fn update_real_names(
     })?;
 
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
+    "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
             .bind(first_name)
             .bind(last_name)
             .bind(id)
+            .execute(&pool)
+            .await?;
+
+    Ok(result.rows_affected() as i32)
+}
+
+
+pub async fn update_client_secret(
+    client_id: &String,
+    hashed_client_secret: &String
+) -> Result<i32, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let result = sqlx::query(
+        "UPDATE client_sites SET hashed_client_secret = ? WHERE client_id = ?")
+            .bind(hashed_client_secret)
+            .bind(client_id)
             .execute(&pool)
             .await?;
 

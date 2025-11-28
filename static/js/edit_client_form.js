@@ -103,9 +103,16 @@ const request_new_secret = async () => {
             
             // response is good. Process good response in next then() link
             return response.json()
-        }).then(data =>{
-            if (!!data.raw_client_secret) {
-                console.log("NEW SECRET: " + data.raw_client_secret)
+        }).then(secret_data =>{
+
+            if(!!secret_data.raw_client_secret){
+                const secret_message = "Here is the NEW CLIENT_SECRET for the existing domain, " +
+                    "(client id: " + client_id + " )" +
+                    "We will never show this again, so COPY IT NOW and put it in " +
+                    "the environment variables of the client site."
+                msgs.push(secret_message)
+                msgs.push(secret_data.raw_client_secret)
+                show_msg_box()
             }
         })
 }

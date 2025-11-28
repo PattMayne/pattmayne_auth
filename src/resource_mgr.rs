@@ -502,8 +502,6 @@ impl ErrorData {
     }
 }
 
-
-
 fn missing_error(lang: &SupportedLangs) -> &'static str {
     match lang {
         SupportedLangs::English => "Error",

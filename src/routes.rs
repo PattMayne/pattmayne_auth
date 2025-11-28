@@ -550,10 +550,23 @@ async fn req_secret_post(
        raw_client_secret_json.raw_client_secret.to_owned()
     ).to_owned();
 
+    match db::update_client_secret(&inputs.client_id, &hashed_client_secret).await {
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                HttpResponse::Ok()
+                    .json(raw_client_secret_json)
+            } else {
+                return_internal_err_json()
+            }
+        },
+        Err(_e) => {
+            return_internal_err_json()
+        }
+    }
+
     // Now save the hashed version to the DB and send the raw version to admin.
     // BUT FOR NOW let's just return the raw one for that flow to work, THEN incorporate the DB
-    HttpResponse::Ok()
-        .json(raw_client_secret_json)    
+
 }
 
 
@@ -641,10 +654,10 @@ async fn new_client_post(
             is_active: inputs.is_active,
         };
 
-        let update_client_result: Result<u64, anyhow::Error> =
+        let new_client_result: Result<u64, anyhow::Error> =
             db::add_external_client(client_data).await;
         
-        match update_client_result {
+        match new_client_result {
             Ok(rows_affected) => {
                 if rows_affected > 0 {
                     // We added it to the DB. Send the admin their raw secret.
