@@ -23,6 +23,8 @@ use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
 
+use crate::resource_mgr;
+use crate::resources::get_translation;
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::{
     db, utils,
@@ -371,7 +373,10 @@ struct DashboardTemplate<'a> {
  * and against the DB & see if it already exists.
 */
 #[post("/register")]
-async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {    
+async fn register_post(
+    req: HttpRequest,
+    info: web::Json<RegisterCredentials>
+) -> HttpResponse {    
 
     // check credentials against regex and size ranges
     let username_valid: bool = utils::validate_username(&info.username);
@@ -431,25 +436,37 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
                     return give_user_auth_cookies(user).await;
                 },
                 Ok(None) => {
+                    let code: u16 = 404;
+                    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+                    let error_data: ErrorData = ErrorData::new(
+                        code.to_string(), &user_req_data.lang);
                     return HttpResponse::NotFound().json(ErrorResponse {
-                        error: String::from("User not found."),
-                        code: 404
+                        error: String::from(error_data.title),
+                        code
                     });
                 },
-                Err(e) => {
+                Err(_e) => {
+                    let code: u16 = 500;
                     // Worse than not finding a user. Something broke.
+                    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+                    let error_data: ErrorData = ErrorData::new(
+                        code.to_string(), &user_req_data.lang);
                     return HttpResponse::InternalServerError().json(ErrorResponse {
-                        error: e.to_string(),
-                        code: 500
+                        error: String::from(error_data.title),
+                        code
                     });
                 }
             }
         },
         Err(e) => {
+            let code: u16 = 500;
+            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+            let error_data: ErrorData = ErrorData::new(
+                code.to_string(), &user_req_data.lang);
             eprintln!("Failed to save user to DB: {:?}", e);
             HttpResponse::InternalServerError().json(ErrorResponse {
-                error: e.to_string(),
-                code: 500
+                error: String::from(error_data.title),
+                code
             })
         }
     }
@@ -460,13 +477,18 @@ async fn register_post(info: web::Json<RegisterCredentials>) -> HttpResponse {
  * Get user data, check it against the DB & see if it's right.
 */
 #[post("/login")]
-async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
+async fn login_post(
+    req: HttpRequest,
+    info: web::Json<LoginCredentials>
+) -> HttpResponse {
 
     // Check for empty fields
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
+        let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+        let error_string: String = get_translation("err.empty_creds", &user_req_data.lang, None);
         return HttpResponse::Unauthorized().json(
             ErrorResponse {
-            error: String::from("Invalid Credentials: Empty Field."),
+            error: error_string,
             code: 401
         });
     }
@@ -493,21 +515,30 @@ async fn login_post(info: web::Json<LoginCredentials>) -> HttpResponse {
             }
 
             // Auth clearly failed
+            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+            let error_string: String = get_translation(
+                "err.invalid_creds", &user_req_data.lang, None);
             HttpResponse::Unauthorized().json(ErrorResponse {
-                error: String::from("Invalid Credentials"),
+                error: error_string,
                 code: 401
             })
         },
         Ok(None) => {
+            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+            let error_string: String = get_translation(
+                "err.user_not_found", &user_req_data.lang, None);
             HttpResponse::NotFound().json(ErrorResponse {
-                error: String::from("User not found."),
+                error: error_string,
                 code: 404
             })
         },
         Err(e) => {
             // Worse than not finding a user. Something broke.
+            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+            let error_string: String = get_translation(
+                "err.500.title", &user_req_data.lang, None);
             HttpResponse::InternalServerError().json(ErrorResponse {
-                error: e.to_string(),
+                error: error_string,
                 code: 500
             })
         }

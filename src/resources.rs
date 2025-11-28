@@ -157,7 +157,7 @@ pub static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "nav.dashboard.en" => "DASHBOARD",
     "nav.dashboard.fr" => "TABLEAU DE BORD",
 
-    // ERROR CODES AND TITLES
+    // ERROR CODES AND TITLES FOR ERROR PAGE
     "err.400.title.en" => "Bad Request",
     "err.400.title.fr" => "Mauvaise demande",
     "err.400.body.en" => "The request was malformed or otherwise bad.",
@@ -217,6 +217,14 @@ pub static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "err.504.title.fr" => "Délai d'attente de la passerelle",
     "err.504.body.en" => "Server did not respond in time.",
     "err.504.body.fr" => "Le serveur n'a pas répondu à temps.",
+
+    // AD-HOC ERRORS FOR JSON
+    "err.empty_creds.en" => "Invalid Credentials: Empty Field.",
+    "err.empty_creds.fr" => "Identifiants invalides : champ vide.",
+    "err.invalid_creds.en" => "Invalid Credentials.",
+    "err.invalid_creds.fr" => "Identifiants invalides.",
+    "err.user_not_found.en" => "User not found.",
+    "err.user_not_found.fr" => "Utilisateur non trouvé.",
 };
 
 
