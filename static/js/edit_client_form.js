@@ -97,24 +97,39 @@ const request_new_secret = async () => {
     await utils.fetch_json_post(route, data)
         .then(response => {
             if (!response.ok) {
-                console.log("DEAL WITH ERROR")
-                throw new Error("DEAL WITH ERROR")
+                response.json().then(data => {
+                    if (!!data.code && data.code == 403 || data.code == 401) {
+                        const redirect_uri = "/error/" + data.code;
+                        window.location.href = redirect_uri;
+                    } else {
+                        let msg = (!!data.code) ? (data.code.toString() + " ") : ""
+                        msg += (!!data.error) ? data.error : " Error occurred"
+                        msgs.push(msg)
+                        show_msg_box()
+                    }
+                })
+                throw new Error("Could not update client secret, or server error.")
             }
             
             // response is good. Process good response in next then() link
             return response.json()
-        }).then(secret_data =>{
-
-            if(!!secret_data.raw_client_secret){
-                const secret_message = "Here is the NEW CLIENT_SECRET for the existing domain, " +
-                    "(client id: " + client_id + " )" +
-                    "We will never show this again, so COPY IT NOW and put it in " +
-                    "the environment variables of the client site."
-                msgs.push(secret_message)
-                msgs.push(secret_data.raw_client_secret)
-                show_msg_box()
-            }
-        })
+    }).then(secret_data => {
+        if (!!secret_data.raw_client_secret){
+            const secret_message = "Here is the NEW CLIENT_SECRET for the existing domain, " +
+                "(client id: " + client_id + " )" +
+                "We will never show this again, so COPY IT NOW and put it in " +
+                "the environment variables of the client site."
+            msgs.push(secret_message)
+            msgs.push(secret_data.raw_client_secret)
+            show_msg_box()
+        } else {
+            throw new Error("No client secret returned. See admin.")
+        }
+    }).catch(error => {
+        const message = "Error: " + error
+        msgs.push(message)
+        show_msg_box()
+    })
 }
 
 
