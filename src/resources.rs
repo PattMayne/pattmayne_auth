@@ -239,7 +239,6 @@ fn missing_trans(lang: &SupportedLangs) -> &'static str {
 }
 
 
-
 /**
  * Take the keyword for the translation to call,
  * a language enum so we know the language suffix to add,

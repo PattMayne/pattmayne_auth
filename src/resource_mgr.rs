@@ -501,3 +501,24 @@ impl ErrorData {
         }
     }
 }
+
+
+
+fn missing_error(lang: &SupportedLangs) -> &'static str {
+    match lang {
+        SupportedLangs::English => "Error",
+        SupportedLangs::French => "Erreur"
+    }
+}
+
+/**
+ * Uses the title of the Error Page error data for simple error messages.
+ */
+pub fn error_by_code(code: String, lang: &SupportedLangs) -> &'static str {
+    let key: String = format!("{}.{}.{}.{}", "err", code, "title", lang.suffix());
+
+    match TRANSLATIONS.get(&key) {
+        Some(translation) => translation,
+        None => missing_error(lang)
+    }
+}

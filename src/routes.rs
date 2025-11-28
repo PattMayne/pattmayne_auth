@@ -23,7 +23,6 @@ use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
 
-use crate::resource_mgr;
 use crate::resources::get_translation;
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::{
@@ -32,7 +31,7 @@ use crate::{
     resource_mgr::{
         HomeTexts, LoginTexts, RegisterTexts, AdminTexts,
         ErrorTexts, EditClientTexts, NewClientTexts, DashboardTexts,
-        ErrorData
+        ErrorData, error_by_code
      }
 };
 
@@ -437,37 +436,24 @@ async fn register_post(
                 },
                 Ok(None) => {
                     let code: u16 = 404;
-                    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-                    let error_data: ErrorData = ErrorData::new(
-                        code.to_string(), &user_req_data.lang);
-                    return HttpResponse::NotFound().json(ErrorResponse {
-                        error: String::from(error_data.title),
-                        code
-                    });
+                    let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
+                    let error: String = error_by_code(code.to_string(), &lang).to_string();
+                    return HttpResponse::NotFound().json(ErrorResponse { error, code });
                 },
                 Err(_e) => {
                     let code: u16 = 500;
-                    // Worse than not finding a user. Something broke.
-                    let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-                    let error_data: ErrorData = ErrorData::new(
-                        code.to_string(), &user_req_data.lang);
-                    return HttpResponse::InternalServerError().json(ErrorResponse {
-                        error: String::from(error_data.title),
-                        code
-                    });
+                    let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
+                    let error: String = error_by_code(code.to_string(), &lang).to_string();
+                    return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
                 }
             }
         },
         Err(e) => {
             let code: u16 = 500;
-            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-            let error_data: ErrorData = ErrorData::new(
-                code.to_string(), &user_req_data.lang);
+            let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
+            let error: String = error_by_code(code.to_string(), &lang).to_string();
             eprintln!("Failed to save user to DB: {:?}", e);
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                error: String::from(error_data.title),
-                code
-            })
+            HttpResponse::InternalServerError().json(ErrorResponse { error, code })
         }
     }
 }
@@ -485,10 +471,10 @@ async fn login_post(
     // Check for empty fields
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-        let error_string: String = get_translation("err.empty_creds", &user_req_data.lang, None);
+        let error: String = get_translation("err.empty_creds", &user_req_data.lang, None);
         return HttpResponse::Unauthorized().json(
             ErrorResponse {
-            error: error_string,
+            error,
             code: 401
         });
     }
@@ -515,32 +501,25 @@ async fn login_post(
             }
 
             // Auth clearly failed
-            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-            let error_string: String = get_translation(
-                "err.invalid_creds", &user_req_data.lang, None);
-            HttpResponse::Unauthorized().json(ErrorResponse {
-                error: error_string,
-                code: 401
-            })
+            let code: u16 = 401;
+            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+            let error: String = get_translation(
+                "err.invalid_creds", &lang, None);
+            HttpResponse::Unauthorized().json(ErrorResponse { error, code })
         },
         Ok(None) => {
-            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-            let error_string: String = get_translation(
-                "err.user_not_found", &user_req_data.lang, None);
-            HttpResponse::NotFound().json(ErrorResponse {
-                error: error_string,
-                code: 404
-            })
+            let code: u16 = 404;
+            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+            let error: String = get_translation(
+                "err.user_not_found", &lang, None);
+            HttpResponse::NotFound().json(ErrorResponse { error, code })
         },
-        Err(e) => {
+        Err(_e) => {
             // Worse than not finding a user. Something broke.
-            let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
-            let error_string: String = get_translation(
-                "err.500.title", &user_req_data.lang, None);
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                error: error_string,
-                code: 500
-            })
+            let code: u16 = 500;
+            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+            let error: String = error_by_code(code.to_string(), &lang).to_string();
+            HttpResponse::InternalServerError().json(ErrorResponse { error, code })
         }
     }
 }
