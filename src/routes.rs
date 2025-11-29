@@ -530,6 +530,12 @@ async fn login_post(
 }
 
 
+/**
+ * The admin can update the client secret.
+ * They receive the raw (unhashed) secret ONCE and they must put that
+ * in the env variables of the client site.
+ * We then hash the secret and store the hashed version in the DB.
+ */
 #[post("/req_new_client_secret")]
 async fn req_secret_post(
     req: HttpRequest,
@@ -563,10 +569,6 @@ async fn req_secret_post(
             return_internal_err_json()
         }
     }
-
-    // Now save the hashed version to the DB and send the raw version to admin.
-    // BUT FOR NOW let's just return the raw one for that flow to work, THEN incorporate the DB
-
 }
 
 
