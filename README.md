@@ -4,7 +4,6 @@ An authentication app I will use to serve a few web apps and games I intend to m
 I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
 
 ### TO DO:
- * create resources file (probably just a constants file)
  * suspend IP address if too many failed attempts
  * create endpoints for another app to authenticate
  * * new routes file called external_routes
@@ -31,9 +30,9 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * * This requires I do my own ARIA compliance stuff
  * Read language from header to create FR option in UserReqObj
  * Give user "lang" option in the DB
- * Front-end translations
- * * Including errors sent back in JSON in routes.rs
  * Turn on Content-Encoding: gzip
+ * Modal popup demands confirmation before generating new client_secret
+ * Too many nested match patterns in routes.rs.
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.

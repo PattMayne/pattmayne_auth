@@ -824,10 +824,6 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             code: 500
     });
 
-    // Checking that the secret exists
-
-
-    // Secret exists. Now let's generate the actual token
     let jwt_result: Result<String, auth::AuthError> = auth::generate_jwt(
         user.get_id(),
         user.get_username().to_owned(),
