@@ -90,7 +90,8 @@ pub struct LoginTexts {
     pub username_email: String,
     pub password: String,
     pub login_btn: String,
-    pub nav: NavTexts
+    pub sites: String,
+    pub nav: NavTexts,
 }
 
 impl LoginTexts {
@@ -101,6 +102,7 @@ impl LoginTexts {
         let username_email: String = get_translation("login.username.email.label", lang, None);
         let password: String = get_translation("login.password.label", lang, None);
         let login_btn: String = get_translation("login.btn", lang, None);
+        let sites: String = get_translation("login.client_site.label", lang, None);
         let nav = NavTexts::new(lang);
 
         LoginTexts {
@@ -109,7 +111,8 @@ impl LoginTexts {
             username_email,
             password,
             login_btn,
-            nav
+            sites,
+            nav,
         }
     }
 }

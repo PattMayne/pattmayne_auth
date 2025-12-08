@@ -84,6 +84,8 @@ pub static TRANSLATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "login.username.email.label.fr" => "Nom d'utilisateur ou e-mail:",
     "login.password.label.en" => "Password:",
     "login.password.label.fr" => "Mot de passe:",
+    "login.client_site.label.en" => "Destination Site:",
+    "login.client_site.label.fe" => "Site de destination:",
     // LOGIN BUTTONS
     "login.btn.en" => "LOGIN",
     "login.btn.fr" => "ACCUEIL",

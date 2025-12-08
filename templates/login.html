@@ -29,22 +29,43 @@
                                 &nbsp;
                             </div>
                             <div class="large-4 medium-6 small-12 cell">
-                                <h4>{{ texts.title }}</h4>
-                                <label>
-                                    {{ texts.username_email }}
-                                    <input
-                                        id="username_or_email"
-                                        name="username_or_email"
-                                        type="text" />
-                                </label>
 
-                                <label>
-                                    {{ texts.password }}
-                                    <input id="password" name="password" type="password" />
-                                </label>
+                                {% if login_is_available %}
 
-                                <a class="button small"
-                                    onclick="submit_login()">{{ texts.login_btn }}</a>
+                                    <h4>{{ texts.title }}</h4>
+
+                                    <label>
+                                        {{ texts.sites }}
+                                        <select id="client_site" name="client_site">
+                                            {% for client_ref in client_refs %}
+                                                <option value="{{client_ref.client_id}}">{{client_ref.name}}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        {{ texts.username_email }}
+                                        <input
+                                            id="username_or_email"
+                                            name="username_or_email"
+                                            type="text" />
+                                    </label>
+
+                                    <label>
+                                        {{ texts.password }}
+                                        <input id="password" name="password" type="password" />
+                                    </label>
+
+                                    <a class="button small"
+                                        onclick="submit_login()">{{ texts.login_btn }}</a>
+
+                                {% else %}
+
+                                    <h3>LOGIN UNAVAILABLE</h3>
+
+                                {% endif %}
+
+
                             </div>
                             <div class="large-4 medium-3 cell hide-for-small-only">
                                 &nbsp;

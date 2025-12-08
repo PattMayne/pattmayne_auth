@@ -293,6 +293,8 @@ struct HomeTemplate {
 struct LoginTemplate {
     texts: LoginTexts,
     user: auth::UserReqData,
+    client_refs: Vec<db::ClientRef>,
+    login_is_available: bool,
 }
 
 #[derive(Template)]
@@ -1070,16 +1072,29 @@ pub fn redirect_to_err(err_code: String) -> impl Responder {
 pub async fn login_page(req: HttpRequest) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
+    // Get client site references to list on login site
+    let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
+        Ok(refs) => refs,
+        Err(e) => {
+            eprintln!("Error retrieving client references: {e}");
+            Vec::new()
+        }
+    };
+
+    // Make sure there's a site to login to.
+    let login_is_available: bool = client_refs.len() > 0;
+
     let login_template: LoginTemplate = LoginTemplate {
         texts: LoginTexts::new(&user_req_data),
-        user: user_req_data
+        user: user_req_data,
+        client_refs,
+        login_is_available,
     };
 
     HttpResponse::Ok()
         .content_type("text/html")
         .body(login_template.render().unwrap())
 }
-
 
 
 /* REGISTER PAGE ROUTE FUNCTION */
