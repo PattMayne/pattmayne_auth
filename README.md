@@ -34,6 +34,7 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Modal popup demands confirmation before generating new client_secret
  * Too many nested match patterns in routes.rs.
  * Write an essay about the auth flow between instances to help remember the details.
+ * Apply regex check to logo url in "edit client site" page
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.

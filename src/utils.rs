@@ -96,11 +96,11 @@ pub fn auth_client_id() -> String { String::from("auth_site") }
 
 pub fn validate_url(url: &String) -> bool {
     let lenient_regex: Regex =
-        Regex::new(r"^https:\/\/[^\s/$.?#].[^\s]*$")
+        Regex::new(r"^https?://[^\s/$.?#].[^\s]*$")
         .unwrap();
     // We might never use the strict regex
     let _strict_regex = 
-        Regex::new(r"^https:\/\/([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?$")
+        Regex::new(r"^https?://([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?$")
         .unwrap();
     lenient_regex.is_match(url)
 }
