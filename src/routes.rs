@@ -826,50 +826,46 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
             code: 500
     });
 
-    let jwt_result: Result<String, auth::AuthError> = auth::generate_jwt(
+    // Generate a token String
+    let jwt: String = match auth::generate_jwt(
         user.get_id(),
         user.get_username().to_owned(),
         user.get_role().to_owned()
-    );
+    ) {
+        Ok(token) => token,
+        Err(e) => {
+            eprint!("Internal Server Error: {e}");
+            return jwt_err_500;
+        }
+    };
 
-    // Make sure we really got a token
-    match jwt_result {
-        Ok(jwt) => {
-            // create a refresh_token and put it in the DB
-            let refresh_token: String = auth::generate_refresh_token();
-            match db::add_refresh_token(
-                user.get_id(),
-                utils::auth_client_id(),
-                &refresh_token
-            ).await {
-                Ok(_rows_affected) => {
-                    // Refresh token successfully inserted into DB
-                    // Now make the cookies and set them in the req
-                    let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
-                        jwt,
-                        String::from("jwt"));
-                    let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
-                        refresh_token,
-                        String::from("refresh_token"));
+    // create a refresh_token and put it in the DB
+    let refresh_token: String = auth::generate_refresh_token();
+    match db::add_refresh_token(
+        user.get_id(),
+        utils::auth_client_id(),
+        &refresh_token
+    ).await {
+        Ok(_rows_affected) => {
+            // Refresh token successfully inserted into DB
+            // Now make the cookies and set them in the req
+            let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
+                jwt,
+                String::from("jwt"));
+            let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
+                refresh_token,
+                String::from("refresh_token"));
 
-                    return HttpResponse::Ok()
-                        .cookie(jwt_cookie)
-                        .cookie(refresh_token_cookie)
-                        .json(FreshLoginData {
-                            user_id: user.get_id(),
-                            username: user.get_username().to_owned()
-                    });
-                },
-                Err(e) => {
-                    eprint!("Internal Server Error: {e}");
-                    jwt_err_500
-                }
-            }
+            return HttpResponse::Ok()
+                .cookie(jwt_cookie)
+                .cookie(refresh_token_cookie)
+                .json(FreshLoginData {
+                    user_id: user.get_id(),
+                    username: user.get_username().to_owned()
+            });
         },
-
-        // No token. Show error
-        Err(_e) => {
-            eprint!("Internal Server Error: JWT AuthError");
+        Err(e) => {
+            eprint!("Internal Server Error: {e}");
             jwt_err_500
         }
     }

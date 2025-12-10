@@ -283,14 +283,11 @@ pub fn generate_jwt(
     };
 
     // Get JWT secret from env. Return err if missing.
-    let jwt_secret_result: Result<String, std::env::VarError> = get_jwt_secret();
-    if jwt_secret_result.is_err() {
-        return Err(AuthError::MissingJwtSecret);
-    }
+    let jwt_secret: String = get_jwt_secret()
+        .map_err(|_| AuthError::MissingJwtSecret)?;
 
     // secret exists in env variables. Encode and match the result.
     // Encoding includes the HS256 signature.
-    let jwt_secret = jwt_secret_result.unwrap();
     let jwt_result: Result<String, Error> =
         encode(
             &Header::default(),
@@ -349,7 +346,10 @@ pub async fn verify_jwt(token: &str) -> JwtVerification {
     // get the jwt secret so we can decode the jwt string
     let secret: String = match get_jwt_secret() {
         Ok(s) => s,
-        Err(_e) => return JwtVerification::Invalid
+        Err(_e) => {
+            eprintln!("Failed to retrieve JWT SECRET");
+            return JwtVerification::Invalid;
+        }
     };
 
     // HS256 algorithm matches the header default I use to encode
