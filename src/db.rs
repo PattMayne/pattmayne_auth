@@ -334,13 +334,15 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
 
  /**
   * Add a refresh token to the database.
-  * for a particular user and particular client site
+  * for a particular user and particular client site.
+  * Take ownership of token, because it should ONLY be given back
+  * if it's saved successfully to the DB.
   */
  pub async fn add_refresh_token(
     user_id: i32,
     client_id: String,
-    refresh_token: &String
-) -> Result<i32, anyhow::Error> {
+    refresh_token: String
+) -> Result<String, anyhow::Error> {
     let pool: MySqlPool = create_pool().await.map_err(|e| {
         eprintln!("Failed to create pool: {:?}", e);
         anyhow!("Could not create pool: {e}")
@@ -350,7 +352,7 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
         OffsetDateTime::now_utc() + Duration::days(14);
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
 
-    let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+    let _result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "INSERT INTO refresh_tokens (
             user_id,
             client_id,
@@ -373,7 +375,7 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
         anyhow!("Could not save refresh_token to database: {e}")
     })?;
 
-    Ok(result.rows_affected() as i32)
+    Ok(refresh_token)
  }
 
 
