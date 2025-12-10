@@ -21,10 +21,21 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     client_id VARCHAR(100) NOT NULL, -- NOT the table/row index, but the string client_id
-    token VARCHAR(255) NOT NULL UNIQUE,
+    token VARCHAR(100) NOT NULL UNIQUE,
     created_timestamp TIMESTAMP NOT NULL DEFAULT UTC_TIMESTAMP,
     expires_timestamp TIMESTAMP NOT NULL,
     UNIQUE KEY unique_user_client (user_id, client_id)
+);
+
+
+-- auth codes to send to the client apps, and receive them back
+CREATE TABLE IF NOT EXISTS auth_codes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    client_id VARCHAR(100) NOT NULL,
+    code VARCHAR(100) NOT NULL UNIQUE,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT UTC_TIMESTAMP,
+    expires_timestamp TIMESTAMP NOT NULL
 );
 
 

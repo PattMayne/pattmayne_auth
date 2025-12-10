@@ -375,12 +375,61 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
         anyhow!("Could not save refresh_token to database: {e}")
     })?;
 
+    // Return the refresh_token, because now it's safe to use (saved to DB)
     Ok(refresh_token)
  }
 
 
+ 
+ /**
+  * Add a auth token to the database.
+  * for a particular user and particular client site.
+  * Take ownership of token, because it should ONLY be given back
+  * if it's saved successfully to the DB.
+  */
+ pub async fn add_auth_token(
+    user_id: i32,
+    client_id: String,
+    auth_token: String
+) -> Result<String, anyhow::Error> {
+    let pool: MySqlPool = create_pool().await.map_err(|e| {
+        eprintln!("Failed to create pool: {:?}", e);
+        anyhow!("Could not create pool: {e}")
+    })?;
+
+    let expires_timestamp: OffsetDateTime =
+        OffsetDateTime::now_utc() + Duration::minutes(1);
+    let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
+
+    let _result: sqlx::mysql::MySqlQueryResult = sqlx::query(
+        "INSERT INTO auth_tokens (
+            user_id,
+            client_id,
+            token,
+            created_timestamp,
+            expires_timestamp)
+        VALUES (?, ?, ?, ?, ?)")
+    .bind(user_id)
+    .bind(client_id)
+    .bind(&auth_token)
+    .bind(created_timestamp)
+    .bind(expires_timestamp)
+    .execute(&pool).await.map_err(|e| {
+        eprintln!("Failed to save auth_token to database: {:?}", e);
+        anyhow!("Could not save auth_token to database: {e}")
+    })?;
+
+    // Return the auth_token, because now it's safe to use (saved to DB)
+    Ok(auth_token)
+ }
+
+
 // Add new user to database
-pub async fn add_user(username: &String, email: &String, password: String) -> Result<i32, anyhow::Error> {
+pub async fn add_user(
+    username: &String,
+    email: &String,
+    password: String
+) -> Result<i32, anyhow::Error> {
     // map_err changes a possible error into the return type of error I return in the closure
     // This is simpler and more idiomatic than doing a match
     let pool: MySqlPool = create_pool().await.map_err(|e| {

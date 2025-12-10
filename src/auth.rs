@@ -70,6 +70,8 @@ use crate::utils::{self, SupportedLangs};
  * 
  * 
  * 
+ * 
+ * 
  * ===============================
  * ===============================
  * ==========           ==========
@@ -77,7 +79,9 @@ use crate::utils::{self, SupportedLangs};
  * ==========           ==========
  * ===============================
  * ===============================
+ * 
  * and their implemented functions
+ * 
  * 
  * 
  * 
@@ -241,6 +245,8 @@ pub fn get_user_req_data(req: &HttpRequest) -> UserReqData {
  * 
  * 
  * 
+ * 
+ * 
  * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  * xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  * xxxxxxxxxx          xxxxxxxxxx
@@ -252,6 +258,8 @@ pub fn get_user_req_data(req: &HttpRequest) -> UserReqData {
  * JSON Web Tokens
  * Refresh Tokens
  * Build them, put them in cookies, verify them, etc.
+ * 
+ * 
  * 
  * 
  * 
@@ -376,5 +384,54 @@ pub async fn verify_jwt(token: &str) -> JwtVerification {
 // Get the JWT secret from env variables
 pub fn get_jwt_secret() -> Result<String, std::env::VarError> {
     std::env::var("JWT_SECRET")
+}
+
+
+
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ===========================
+ * ===========================
+ * =====                 =====
+ * =====  EXTERNAL AUTH  =====
+ * =====                 =====
+ * ===========================
+ * ===========================
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * Functions specifically for authenticating external client apps.
+ * Some of the ABOVE functions are also used for external apps (such as
+ * the refresh token) but the BELOW functions are ONLY for external client apps.
+ * 
+ * 
+*/
+
+
+
+
+
+/**
+ * Make a totally random refresh token to save to DB.
+ * When user logs in from external client, we redirect them BACK to the client
+ * along with this code. Then the client must send this code BACK to this app
+ * for verification (before we send the refresh_token to the client app!!!!)
+ */
+pub fn generate_auth_token() -> String {
+    rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(32) // 32 chars
+        .map(char::from)
+        .collect()
 }
 
