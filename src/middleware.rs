@@ -67,7 +67,6 @@ pub async fn login_status_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
-
     let guest_data: auth::UserReqData = auth::UserReqData::new(None);
     let user_req_data_opt: Option<actix_web::cookie::Cookie<'_>> = req.cookie("jwt");
     let user_req_data: auth::UserReqData = get_user_req_data_from_opt(

@@ -123,6 +123,19 @@ pub struct UserReqData {
 }
 
 
+/* 
+ * 
+ * ====================================
+ * ====================================
+ * =====                          =====
+ * =====  STRUCT IMPLEMENTATIONS  =====
+ * =====                          =====
+ * ====================================
+ * ====================================
+ * 
+*/
+
+
 impl fmt::Display for AuthError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg: String = match self {
@@ -269,22 +282,26 @@ pub fn generate_jwt(
         exp,
     };
 
-    match get_jwt_secret() {
-        Ok(secret) => {
-            // secret exists in env variables. Encode and match the result
-            let jwt_result: Result<String, Error> =
-                encode(
-                    &Header::default(),
-                    &claims,
-                    &EncodingKey::from_secret(secret.as_bytes())
-                );
-            match jwt_result {
-                Ok(jwt) => Ok(jwt),
-                Err(_e) => Err(AuthError::MissingJwtSecret)
-            }
-        },
+    // Get JWT secret from env. Return err if missing.
+    let jwt_secret_result: Result<String, std::env::VarError> = get_jwt_secret();
+    if jwt_secret_result.is_err() {
+        return Err(AuthError::MissingJwtSecret);
+    }
+
+    // secret exists in env variables. Encode and match the result.
+    // Encoding includes the HS256 signature.
+    let jwt_secret = jwt_secret_result.unwrap();
+    let jwt_result: Result<String, Error> =
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(jwt_secret.as_bytes())
+        );
+    
+    match jwt_result {
+        Ok(jwt) => Ok(jwt),
         Err(_e) => Err(AuthError::MissingJwtSecret)
-    }    
+    }  
 }
 
 
