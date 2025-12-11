@@ -432,35 +432,34 @@ async fn register_post(
         info.password.clone()
     ).await;
 
-    match user_id_result {
-        Ok(user_id) => {
-
-            // get user object from DB
-            match db::get_user_by_id(user_id).await {
-                Ok(Some(user)) => {
-                    // User may now receive JWT and refresh token.
-                    return give_user_auth_cookies(user).await;
-                },
-                Ok(None) => {
-                    let code: u16 = 404;
-                    let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
-                    let error: String = error_by_code(code.to_string(), &lang).to_string();
-                    return HttpResponse::NotFound().json(ErrorResponse { error, code });
-                },
-                Err(_e) => {
-                    let code: u16 = 500;
-                    let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
-                    let error: String = error_by_code(code.to_string(), &lang).to_string();
-                    return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
-                }
-            }
-        },
+    let user_id: i32 = match user_id_result {
+        Ok(id) => id,
         Err(e) => {
             let code: u16 = 500;
             let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
             let error: String = error_by_code(code.to_string(), &lang).to_string();
             eprintln!("Failed to save user to DB: {:?}", e);
-            HttpResponse::InternalServerError().json(ErrorResponse { error, code })
+            return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
+        }
+    };
+
+    // get user object from DB
+    match db::get_user_by_id(user_id).await {
+        Ok(Some(user)) => {
+            // User may now receive JWT and refresh token.
+            return give_user_auth_cookies(user).await;
+        },
+        Ok(None) => {
+            let code: u16 = 404;
+            let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
+            let error: String = error_by_code(code.to_string(), &lang).to_string();
+            return HttpResponse::NotFound().json(ErrorResponse { error, code });
+        },
+        Err(_e) => {
+            let code: u16 = 500;
+            let lang: utils::SupportedLangs = auth::get_user_req_data(&req).clone_lang();
+            let error: String = error_by_code(code.to_string(), &lang).to_string();
+            return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
         }
     }
 }
@@ -618,7 +617,7 @@ async fn new_client_post(
     );
 
     if !client_id_is_valid {
-        println!("CLIENT ID is not valid");
+        eprintln!("CLIENT ID is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
                 error: String::from("Client ID: 2-20 characters, no spaces"),
@@ -632,7 +631,7 @@ async fn new_client_post(
     );
 
     if !name_is_valid {
-        println!("NAME is not valid");
+        eprintln!("NAME is not valid");
         return HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
             .json(ErrorResponse{
                 error: String::from("Site name: 2-20 characters."),
@@ -640,58 +639,49 @@ async fn new_client_post(
             });
     }
 
-    // If string checks passed, enter into DB, generate secret, show admin secret
-    if domains_are_valid && client_id_is_valid && name_is_valid {
-        let raw_client_secret: String = utils::generate_client_secret();
-        let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
+    // String checks passed. Enter into DB, generate secret, show admin secret
+    let raw_client_secret: String = utils::generate_client_secret();
+    let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
 
-        let client_data: db::NewClientData = db::NewClientData {
-            site_domain: inputs.site_domain.to_owned(),
-            site_name: inputs.site_name.to_owned(),
-            client_id: inputs.client_id.to_owned(),
-            redirect_uri: inputs.redirect_uri.to_owned(),
-            hashed_client_secret: hashed_secret.to_owned(),
-            logo_url: inputs.logo_url.to_owned(),
-            description: inputs.description.to_owned(),
-            category: inputs.category.to_owned(),
-            client_type: inputs.client_type.to_owned(),
-            is_active: inputs.is_active,
-        };
+    let client_data: db::NewClientData = db::NewClientData {
+        site_domain: inputs.site_domain.to_owned(),
+        site_name: inputs.site_name.to_owned(),
+        client_id: inputs.client_id.to_owned(),
+        redirect_uri: inputs.redirect_uri.to_owned(),
+        hashed_client_secret: hashed_secret.to_owned(),
+        logo_url: inputs.logo_url.to_owned(),
+        description: inputs.description.to_owned(),
+        category: inputs.category.to_owned(),
+        client_type: inputs.client_type.to_owned(),
+        is_active: inputs.is_active,
+    };
 
-        let new_client_result: Result<u64, anyhow::Error> =
-            db::add_external_client(client_data).await;
-        
-        match new_client_result {
-            Ok(rows_affected) => {
-                if rows_affected > 0 {
-                    // We added it to the DB. Send the admin their raw secret.
-                    let raw_client_secret_json: RawClientSecret = RawClientSecret {
-                        raw_client_secret
-                    };
-                    return HttpResponse::Ok()
-                        .json(raw_client_secret_json);
-                } else {
-                    return return_internal_err_json();
-                }
-            },
-            Err(e) => {
-                // Database error
-                eprintln!("Error: {e}");
-                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
-                    .json(ErrorResponse{
-                        error: format!("Error: {e}"),
-                        code: 500
-                    })
+    let new_client_result: Result<u64, anyhow::Error> =
+        db::add_external_client(client_data).await;
+    
+    match new_client_result {
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                // We added it to the DB. Send the admin their raw secret.
+                let raw_client_secret_json: RawClientSecret = RawClientSecret {
+                    raw_client_secret
+                };
+                return HttpResponse::Ok()
+                    .json(raw_client_secret_json);
+            } else {
+                return return_internal_err_json();
             }
+        },
+        Err(e) => {
+            // Database error
+            eprintln!("Error: {e}");
+            HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+                .json(ErrorResponse{
+                    error: format!("Error: {e}"),
+                    code: 500
+                })
         }
-    } else {
-        HttpResponse::build(StatusCode::NOT_ACCEPTABLE)
-            .json(ErrorResponse{
-                error: String::from("Invalid Inputs"),
-                code: 406
-            })
     }
-
 }
 
 /**
@@ -875,44 +865,43 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
 pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPassword>) -> HttpResponse {
 
     // make sure user is logged in
-    match auth::get_user_req_data(&req).id {
-        Some(id) => {
-            match db::get_user_by_id(id).await {
-                Ok(Some(_user)) =>{
-                    // User is real user
+    let user_id: i32 = match auth::get_user_req_data(&req).id {
+        Some(id) => id,
+        None => return return_authentication_err_json()
+    };
 
-                    // check credentials against regex and size ranges
-                    let password_valid: bool = utils::validate_password(&password_obj.password);
+    match db::get_user_by_id(user_id).await {
+        Ok(Some(_user)) =>{
+            // User is real user
+            // check credentials against regex and size ranges
+            let password_valid: bool = utils::validate_password(&password_obj.password);
 
-                    if !password_valid {
-                        // One of the fields doesn't match the regex
-                        let bad_password_data: BadPassword = BadPassword::new(422);
-                        return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
-                            .json(bad_password_data);
-                    }
+            if !password_valid {
+                // One of the fields doesn't match the regex
+                let bad_password_data: BadPassword = BadPassword::new(422);
+                return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
+                    .json(bad_password_data);
+            }
 
-                    // Names are valid. Update the DB
-                    let update_password_result: Result<i32, anyhow::Error> =
-                        db::update_password(&password_obj.password, id).await;
-                    
-                    match update_password_result {
-                        Ok(rows_affected) => {
-                            return HttpResponse::Ok()
-                                .json(UpdateData::new(rows_affected > 0))
-                        },
-                        Err(_e) => {
-                            return return_internal_err_json();
-                        }
-                    }
+            // Names are valid. Update the DB
+            let update_password_result: Result<i32, anyhow::Error> =
+                db::update_password(&password_obj.password, user_id).await;
+            
+            match update_password_result {
+                Ok(rows_affected) => {
+                    return HttpResponse::Ok()
+                        .json(UpdateData::new(rows_affected > 0))
                 },
-                Ok(None) => { return return_authentication_err_json(); },
                 Err(_e) => {
                     return return_internal_err_json();
                 }
-            };
+            }
         },
-        None => return return_authentication_err_json()
-    }
+        Ok(None) => { return return_authentication_err_json(); },
+        Err(_e) => {
+            return return_internal_err_json();
+        }
+    };
 }
 
 
@@ -921,51 +910,49 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // make sure user is logged in
-    match user_req_data.id {
-        Some(id) => {
-            match db::get_user_by_id(id).await {
-                Ok(Some(_user)) =>{
-                    // User is real user
-                    // get json from the req, and names from json
-                    // check names for length. Send back if too long or short
+    let user_id = match user_req_data.id {
+        Some(id) => id,
+        None => return return_authentication_err_json()
+    };
 
-                    // check credentials against regex and size ranges
-                    let names_valid: bool = utils::validate_real_name(&names.first_name) &&
-                        utils::validate_real_name(&names.last_name);
+    match db::get_user_by_id(user_id).await {
+        Ok(Some(_user)) => {
+            // User is real user
+            // get json from the req, and names from json
+            // check names for length. Send back if too long or short
 
-                    if !names_valid {
-                        // One of the fields doesn't match the regex
-                        let bad_names_data: BadNames = BadNames::new(422);
-                        return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
-                            .json(bad_names_data);
-                    }
+            // check credentials against regex and size ranges
+            let names_valid: bool = utils::validate_real_name(&names.first_name) &&
+                utils::validate_real_name(&names.last_name);
 
-                    // Names are valid. Update the DB
-                    let update_names_result: Result<i32, anyhow::Error> =
-                        db::update_real_names(
-                            &names.first_name,
-                            &names.last_name,
-                            id
-                    ).await;
-                    
-                    match update_names_result {
-                        Ok(rows_affected) => {
-                            return HttpResponse::Ok()
-                                .json(UpdateData::new(rows_affected > 0));
-                        },
-                        Err(_e) => {
-                            return return_internal_err_json();
-                        }
-                    }
+            if !names_valid {
+                // One of the fields doesn't match the regex
+                let bad_names_data: BadNames = BadNames::new(422);
+                return HttpResponse::build(StatusCode::UNPROCESSABLE_ENTITY)
+                    .json(bad_names_data);
+            }
+
+            // Names are valid. Update the DB
+            let update_names_result: Result<i32, anyhow::Error> =
+                db::update_real_names(
+                    &names.first_name,
+                    &names.last_name,
+                    user_id
+            ).await;
+            
+            match update_names_result {
+                Ok(rows_affected) => {
+                    return HttpResponse::Ok()
+                        .json(UpdateData::new(rows_affected > 0));
                 },
-                Ok(None) => { return return_authentication_err_json(); },
                 Err(_e) => {
-                    return return_authentication_err_json();
+                    return return_internal_err_json();
                 }
-            };
+            }
         },
-        None => return_authentication_err_json()
-    }
+        Ok(None) => return return_authentication_err_json(),
+        Err(_e) => return return_authentication_err_json()
+    };
 }
 
 
