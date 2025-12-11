@@ -36,6 +36,7 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Write an essay about the auth flow between instances to help remember the details.
  * Apply regex check to logo url in "edit client site" page
  * JWT EXPIRED notice arrives too many times. Route or middleware being hit too many times.
+ * * Depends on what page you're on.
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.

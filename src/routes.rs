@@ -201,7 +201,8 @@ struct RegisterCredentials {
 #[derive(Deserialize)]
 struct LoginCredentials{
     username_or_email: String,
-    password: String
+    password: String,
+    client_id: String,
 }
 
 #[derive(Deserialize)]
@@ -496,38 +497,45 @@ async fn login_post(
             db::get_user_by_username(&info.username_or_email).await
     };
 
-    // NOW we can do PATTERN MATCHING to return something
-    match user_result {
+    let user = match user_result {
         Ok(Some(user)) => {
 
-            // Now check the password
+            // Now check the input password against password from DB
             if db::verify_password(&info.password, user.get_password_hash()) {
-                // User may now receive JWT and refresh token.
-                return give_user_auth_cookies(user).await;
+                user
+            } else {
+                // Auth clearly failed
+                let code: u16 = 401;
+                let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+                let error: String = get_translation(
+                    "err.invalid_creds", &lang, None);
+                return HttpResponse::Unauthorized().json(ErrorResponse { error, code });
             }
-
-            // Auth clearly failed
-            let code: u16 = 401;
-            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
-            let error: String = get_translation(
-                "err.invalid_creds", &lang, None);
-            HttpResponse::Unauthorized().json(ErrorResponse { error, code })
         },
         Ok(None) => {
             let code: u16 = 404;
             let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
             let error: String = get_translation(
                 "err.user_not_found", &lang, None);
-            HttpResponse::NotFound().json(ErrorResponse { error, code })
+            return HttpResponse::NotFound().json(ErrorResponse { error, code });
         },
         Err(_e) => {
             // Worse than not finding a user. Something broke.
             let code: u16 = 500;
             let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
             let error: String = error_by_code(code.to_string(), &lang).to_string();
-            HttpResponse::InternalServerError().json(ErrorResponse { error, code })
+            return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
         }
-    }
+    };
+
+
+    // create auth_token if site is external
+
+    println!("Client id: {}", info.client_id);
+
+    // User may now receive JWT and refresh token.
+    return give_user_auth_cookies(user).await;
+
 }
 
 
@@ -837,10 +845,11 @@ async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
     ).await {
         Ok(refresh_token) => {
             // Refresh token successfully inserted into DB
-            // Now make the cookies and set them in the req
+            // Now make the cookies and set them in the response
             let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
                 jwt,
                 String::from("jwt"));
+            
             let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
                 refresh_token,
                 String::from("refresh_token"));

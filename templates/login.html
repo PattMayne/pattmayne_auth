@@ -36,7 +36,7 @@
 
                                     <label>
                                         {{ texts.sites }}
-                                        <select id="client_site" name="client_site">
+                                        <select id="client_id" name="client_id">
                                             {% for client_ref in client_refs %}
                                                 <option value="{{client_ref.client_id}}">{{client_ref.name}}</option>
                                             {% endfor %}

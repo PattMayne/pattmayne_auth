@@ -98,6 +98,7 @@ async fn get_user_req_data_from_opt(
 
     // Must use match here because of multiple enums
     match auth::verify_jwt(jwt_cookie.value()).await {
+        auth::JwtVerification::Invalid => Ok(guest_data),
         auth::JwtVerification::Valid(claims) => {
             Ok(auth::UserReqData::new(Some(claims)))
         },
@@ -156,8 +157,7 @@ async fn get_user_req_data_from_opt(
             } else {
                 Ok(guest_data)
             }                   
-        },
-        auth::JwtVerification::Invalid => Ok(guest_data)
+        }
     }
 }
 
