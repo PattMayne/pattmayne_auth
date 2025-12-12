@@ -1,14 +1,14 @@
 // I'm actually using MariaDB which is supposedly a drop-in replacement for MySQL
 
 use sqlx::{MySqlPool };
-use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use rand_core::OsRng;
-use password_hash::{SaltString, PasswordHash};
 use time::{ OffsetDateTime, Duration };
 use anyhow::{ Result, anyhow };
 use serde;
 
-use crate::utils;
+use crate::{
+    utils,
+    auth,
+};
 
 /* 
  * 
@@ -40,6 +40,18 @@ struct Count {
     count: i64,
 }
 
+
+
+#[derive(serde::Serialize)]
+pub struct AuthCodeData {
+    pub id: i32,
+    pub user_id: i32,
+    pub client_id: String,
+    pub code: String,
+    pub expires_timestamp: OffsetDateTime
+}
+
+
 #[derive(serde::Serialize)]
 pub struct User {
     id: i32,
@@ -52,6 +64,13 @@ pub struct User {
     created_timestamp: OffsetDateTime,
     email_verified: i8 // actually a bool but mysql doesn't do "real" bools
 }
+
+
+#[derive(serde::Serialize)]
+pub struct Username {
+    pub username: String,
+}
+
 
 #[derive(serde::Serialize)]
 pub struct RefreshToken {
@@ -82,6 +101,10 @@ pub struct UpdateClientSecret {
     pub hashed_client_secret: String,
 }
 
+
+pub struct ClientSecret {
+    pub hashed_client_secret: String,
+}
 
 /**
  * When you ENTER client site data for the first time
@@ -229,6 +252,18 @@ impl User {
  */
 
 
+ pub async fn get_auth_code_data(client_id: &String) -> Result<Option<AuthCodeData>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+            AuthCodeData,
+            "SELECT id, user_id, client_id, code, expires_timestamp
+            FROM auth_codes WHERE client_id = ?",
+            client_id
+        ).fetch_optional(&pool).await?)
+ }
+
+
 pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
     let pool: MySqlPool = create_pool().await?;
 
@@ -270,6 +305,17 @@ pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
             password_hash, created_timestamp,
             email_verified FROM users WHERE email = ?",
         email
+    ).fetch_optional(&pool).await?)
+}
+
+
+pub async fn get_username_by_id(id: i32) -> Result<Option<Username>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        Username,
+        "SELECT username FROM users WHERE id = ?",
+        id
     ).fetch_optional(&pool).await?)
 }
 
@@ -334,6 +380,18 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
 }
 
 
+pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        ClientSecret,
+        "SELECT hashed_client_secret
+            FROM client_sites WHERE client_id = ?",
+        client_id
+    ).fetch_optional(&pool).await?)
+}
+
+
 /* 
  * 
  * 
@@ -373,7 +431,7 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
     })?;
 
     let expires_timestamp: OffsetDateTime =
-        OffsetDateTime::now_utc() + Duration::days(14);
+        OffsetDateTime::now_utc() + Duration::days(14); // TODO: put this in resources?
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
 
     let _result: sqlx::mysql::MySqlQueryResult = sqlx::query(
@@ -461,7 +519,7 @@ pub async fn add_user(
         anyhow!("Could not create pool: {e}")
     })?;
 
-    let password_hash: String = hash_password(password);
+    let password_hash: String = auth::hash_password(password);
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "INSERT INTO users (
             username,
@@ -758,7 +816,7 @@ pub async fn update_client_secret(
  * Hash it and save it to the database.
  */
 pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
-    let hashed_password: String = hash_password(password.to_owned());
+    let hashed_password: String = auth::hash_password(password.to_owned());
 
     // save password to DB and return positive result
     let pool: MySqlPool = create_pool().await.map_err(|e| {
@@ -909,45 +967,4 @@ pub async fn create_pool() -> Result<MySqlPool> {
     // CHECK: Fails if .env file not found, not readable or invalid.
     let database_url: String = std::env::var("DATABASE_URL")?;
     Ok(MySqlPool::connect(database_url.as_str()).await?)
-}
-
-
-/**
- * Used when a user registers. We must hash their password so that the raw
- * password is never stored in the DB.
- * We take ownership of the input String so it's annihilated after fn runs.
- * @return String (hashed password)
- */
-pub fn hash_password(input_password: String) -> String {
-    let salt: SaltString = SaltString::generate(&mut OsRng);
-
-    // Hash the password and return
-    Argon2::default().hash_password(
-        input_password.as_bytes(),
-        &salt
-    ).unwrap().to_string()
-}
-
-/**
- * When a user logs in we take their raw password string and verify it against
- * the stored hashed password.
- * @return bool (matches or does not match)
- */
-pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
-
-    match PasswordHash::new(&stored_hash) {
-        Ok(parsed_stored_hash) => {
-            let argon2: Argon2<'_> = Argon2::default();
-
-            // returns a bool
-            argon2.verify_password(
-                input_password.as_bytes(),
-                &parsed_stored_hash
-            ).is_ok()
-        },
-        Err(e) => {
-            eprintln!("Password hash error: {:?}", e);
-            false
-        }
-    }
 }

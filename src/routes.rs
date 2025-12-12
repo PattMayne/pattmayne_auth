@@ -27,6 +27,7 @@ use crate::resources::get_translation;
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::{
     db, utils,
+    routes_utils::{ ErrorResponse, return_authentication_err_json, return_internal_err_json },
     auth::{ self, UserReqData },
     resource_mgr::{
         HomeTexts, LoginTexts, RegisterTexts, AdminTexts,
@@ -56,12 +57,6 @@ use crate::{
  * 
  * 
  */
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-    code: u16,
-}
 
 #[derive(Serialize)]
 struct SendToError {
@@ -514,7 +509,7 @@ async fn login_post(
         Ok(Some(user)) => {
 
             // Now check the input password against password from DB
-            if db::verify_password(&info.password, user.get_password_hash()) {
+            if auth::verify_password(&info.password, user.get_password_hash()) {
                 user
             } else {
                 // Auth clearly failed
@@ -613,7 +608,7 @@ async fn req_secret_post(
         raw_client_secret: utils::generate_client_secret()
     };
 
-    let hashed_client_secret = db::hash_password(
+    let hashed_client_secret = auth::hash_password(
        raw_client_secret_json.raw_client_secret.to_owned()
     ).to_owned();
 
@@ -701,7 +696,7 @@ async fn new_client_post(
 
     // String checks passed. Enter into DB, generate secret, show admin secret
     let raw_client_secret: String = utils::generate_client_secret();
-    let hashed_secret: String = db::hash_password(raw_client_secret.to_owned());        
+    let hashed_secret: String = auth::hash_password(raw_client_secret.to_owned());        
 
     let client_data: db::NewClientData = db::NewClientData {
         site_domain: inputs.site_domain.to_owned(),
@@ -1386,25 +1381,6 @@ fn non_admin_rejection(req: &HttpRequest) -> HttpResponse {
         .map_into_boxed_body();
 }
 
-/**
- * Sometimes we don't know what went wrong and we need to return a JSON
- * object which says so.
- */
-fn return_internal_err_json() -> HttpResponse {
-    HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
-        .json(ErrorResponse{
-            error: String::from("Internal server error"),
-            code: 500
-        })
-}
-
-// If authentication failed and user must log back in
-fn return_authentication_err_json() -> HttpResponse {
-    HttpResponse::Unauthorized().json(ErrorResponse{
-        error: String::from("Authentication required"),
-        code: 401
-    })
-}
 
 /**
  * Redirect to error page with a simple and easy function

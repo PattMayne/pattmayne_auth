@@ -6,6 +6,9 @@ use time::{ Duration, OffsetDateTime };
 use actix_web::{ HttpMessage, HttpRequest, cookie::{Cookie, SameSite}};
 use rand::{distr::Alphanumeric, Rng};
 use std::fmt;
+use argon2::{Argon2, PasswordHasher, PasswordVerifier};
+use rand_core::OsRng;
+use password_hash::{SaltString, PasswordHash};
 
 use crate::utils::{self, SupportedLangs};
 
@@ -389,6 +392,74 @@ pub fn get_jwt_secret() -> Result<String, std::env::VarError> {
 
 
 
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * XXXXXXXXXXXXXXXXXXXXXXX
+ * XXXXXXXXXXXXXXXXXXXXXXX
+ * XXXXX             XXXXX
+ * XXXXX  PASSWORDS  XXXXX
+ * XXXXX             XXXXX
+ * XXXXXXXXXXXXXXXXXXXXXXX
+ * XXXXXXXXXXXXXXXXXXXXXXX
+ * 
+ * 
+ * 
+ * 
+*/
+
+
+
+/**
+ * Used when a user registers. We must hash their password so that the raw
+ * password is never stored in the DB.
+ * We take ownership of the input String so it's annihilated after fn runs.
+ * @return String (hashed password)
+ */
+pub fn hash_password(input_password: String) -> String {
+    let salt: SaltString = SaltString::generate(&mut OsRng);
+
+    // Hash the password and return
+    Argon2::default().hash_password(
+        input_password.as_bytes(),
+        &salt
+    ).unwrap().to_string()
+}
+
+/**
+ * When a user logs in we take their raw password string and verify it against
+ * the stored hashed password.
+ * @return bool (matches or does not match)
+ */
+pub fn verify_password(input_password: &String, stored_hash: &String) -> bool {
+
+    match PasswordHash::new(&stored_hash) {
+        Ok(parsed_stored_hash) => {
+            let argon2: Argon2<'_> = Argon2::default();
+
+            // returns a bool
+            argon2.verify_password(
+                input_password.as_bytes(),
+                &parsed_stored_hash
+            ).is_ok()
+        },
+        Err(e) => {
+            eprintln!("Password hash error: {:?}", e);
+            false
+        }
+    }
+}
+
+
+
+
+
+
+
+
 /* 
  * 
  * 
@@ -433,4 +504,44 @@ pub fn generate_auth_code() -> String {
         .take(32) // 32 chars
         .map(char::from)
         .collect()
+}
+
+
+
+// IO STRUCTURES FOR CHECKING AUTH CODES AND GETTING REFRESH TOKENS
+// EACH CLIENT APP MUST ALSO HAVE THESE
+// SO THESE SHOULD ACTUALLY GO IN THEIR OWN MODULE.
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthCodeRequest {
+    pub client_id: String,
+    pub client_secret: String,
+    pub code: String,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthCodeSuccess {
+    pub user_id: i64,
+    pub username: String,
+    pub refresh_token: String,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthCodeError {
+    pub error_code: u16,
+    pub message: String,
+}
+
+
+/* Unified response type enum.
+ * "untagged" means the data within the struct will be 
+ * directly available (NOT within type: err or whatever)
+ */
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)] 
+pub enum AuthCodeResponse {
+    Ok(AuthCodeSuccess),
+    Err(AuthCodeError),
 }

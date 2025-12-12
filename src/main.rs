@@ -6,7 +6,8 @@ use dotenvy;
 
 // Local mods (they can use each other as crates instead of mods)
 mod routes;
-mod external_routes;
+mod routes_external;
+mod routes_utils;
 mod db;
 mod utils;
 mod auth;
@@ -66,7 +67,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/ext_auth")
-                    .service(external_routes::verify_auth_code)
+                    .service(routes_external::verify_auth_code)
             )
             .default_service(web::get().to(routes::not_found)) // <- catch-all
             .wrap(from_fn(middleware::jwt_cookie_middleware))
