@@ -427,11 +427,10 @@ pub fn get_jwt_secret() -> Result<String, std::env::VarError> {
  * along with this code. Then the client must send this code BACK to this app
  * for verification (before we send the refresh_token to the client app!!!!)
  */
-pub fn generate_auth_token() -> String {
+pub fn generate_auth_code() -> String {
     rand::rng()
         .sample_iter(&Alphanumeric)
         .take(32) // 32 chars
         .map(char::from)
         .collect()
 }
-

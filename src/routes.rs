@@ -116,6 +116,11 @@ struct UpdateData {
     success: bool,
 }
 
+#[derive(Serialize)]
+struct FullRedirectUri {
+    redirect_uri: String,
+}
+
 
 impl LogoutData {
     pub fn new() -> Self {
@@ -475,6 +480,14 @@ async fn login_post(
     info: web::Json<LoginCredentials>
 ) -> HttpResponse {
 
+    let server_error: HttpResponse = {
+        // Worse than not finding something. Something broke.
+        let code: u16 = 500;
+        let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+        let error: String = error_by_code(code.to_string(), &lang).to_string();
+        HttpResponse::InternalServerError().json(ErrorResponse { error, code })
+    };
+
     // Check for empty fields
     if info.username_or_email.trim().is_empty() || info.password.trim().is_empty() {
         let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
@@ -519,23 +532,62 @@ async fn login_post(
                 "err.user_not_found", &lang, None);
             return HttpResponse::NotFound().json(ErrorResponse { error, code });
         },
-        Err(_e) => {
-            // Worse than not finding a user. Something broke.
-            let code: u16 = 500;
-            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
-            let error: String = error_by_code(code.to_string(), &lang).to_string();
-            return HttpResponse::InternalServerError().json(ErrorResponse { error, code });
-        }
+        Err(_e) => return server_error
     };
 
 
     // create auth_token if site is external
-
     println!("Client id: {}", info.client_id);
 
-    // User may now receive JWT and refresh token.
-    return give_user_auth_cookies(user).await;
+    /* 
+     * IF client_id is auth_site give_user_auth_cookies
+     */
+    if info.client_id == utils::auth_client_id() {
+        // User may now receive JWT and refresh token.
+        return give_user_auth_cookies(user).await;
+    }
 
+    // It's an external site. So let's get an auth_token and redirect
+    let auth_code: String = match db::add_auth_code(
+        user.get_id(),
+        &info.client_id,
+        auth::generate_auth_code()
+    ).await {
+        Ok(code) => code,
+        Err(_e) => return server_error
+    };
+
+    println!("Auth code: {}", auth_code);
+
+    let redirect_uri_option: Option<String>  =
+        match db::get_redirect_uri(&info.client_id).await {
+            Ok(option) => option,
+            Err(_e) => return server_error
+    };
+
+    match redirect_uri_option {
+        Some(redirect_uri) => {
+            /* we have the code and the redirect_uri.
+             * Build the full URL with querystring and send to frontend for redirect.
+             */
+            let query_key_string: &str = "?code=";
+            let full_uri: FullRedirectUri = FullRedirectUri {
+                redirect_uri: format!("{}{}{}",
+                    &redirect_uri,
+                    query_key_string,
+                    &auth_code
+            )};
+
+            HttpResponse::Ok().json(full_uri)
+        },
+        None => {
+            let code: u16 = 404;
+            let lang: &utils::SupportedLangs = &auth::get_user_req_data(&req).clone_lang();
+            let error: String = get_translation(
+                "err.404.title", &lang, None);
+            HttpResponse::NotFound().json(ErrorResponse { error, code })
+        }
+    }
 }
 
 

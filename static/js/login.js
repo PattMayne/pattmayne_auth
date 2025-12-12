@@ -8,11 +8,6 @@ import * as utils from './utils.js'
 
 let err_msgs = []
 
-const IdType = {
-    EMAIL: "email",
-    USERNAME: "username"
-}
-
 const submit_login = async () => {
     err_msgs = []
     const pass_element = document.getElementById("password")
@@ -40,13 +35,12 @@ const submit_login = async () => {
         hide_err_box()
     }    
 
-
     // now send it to the login route
     const route = "/auth/login"
 
     await utils.fetch_json_post(route, creds)
         .then(response => {
-            if(!response.ok) {
+            if (!response.ok) {
                 response.json().then(data => {
                     let msg = (!!data.code) ? (data.code.toString() + " ") : ""
                     msg += (!!data.error) ? data.error : " Error occurred"
@@ -57,10 +51,12 @@ const submit_login = async () => {
                 throw new Error("User not found or server error.")
             }
             return response.json()
-        }).then(user => {
-            console.log("User data: ", user)
-            if(!!user.user_id){
+        }).then(data => {
+            console.log("data: ", data)
+            if (!!data.user_id){
                 window.location.href = "/dashboard";
+            } else if (!!data.redirect_uri) {
+                window.location.href = data.redirect_uri;
             }
             
         }).catch(error => {

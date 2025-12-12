@@ -130,6 +130,12 @@ pub struct ClientRef {
 }
 
 
+#[derive(serde::Serialize)]
+pub struct RedirectUri {
+    pub redirect_uri: String,
+}
+
+
 impl ClientData {
     pub fn get_is_active(&self) -> bool { self.is_active == 1 }
     pub fn get_is_internal(&self) -> bool { self.is_internal == 1 }
@@ -233,6 +239,24 @@ pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
                 email_verified FROM users WHERE username = ?",
             username
         ).fetch_optional(&pool).await?)
+}
+
+
+pub async fn get_redirect_uri(client_id: &String) -> Result<Option<String>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    let redirect_option: Option<RedirectUri> = sqlx::query_as!(
+            RedirectUri,
+            "SELECT redirect_uri FROM client_sites WHERE client_id = ?",
+            client_id
+        ).fetch_optional(&pool).await?;
+    
+    match redirect_option {
+        Some(redirect_obj) => {
+            Ok(Some(redirect_obj.redirect_uri))
+        },
+        None => Ok(None)
+    }
 }
 
 
@@ -387,10 +411,10 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
   * Take ownership of token, because it should ONLY be given back
   * if it's saved successfully to the DB.
   */
- pub async fn add_auth_token(
+ pub async fn add_auth_code(
     user_id: i32,
-    client_id: String,
-    auth_token: String
+    client_id: &String,
+    auth_code: String
 ) -> Result<String, anyhow::Error> {
     let pool: MySqlPool = create_pool().await.map_err(|e| {
         eprintln!("Failed to create pool: {:?}", e);
@@ -402,25 +426,25 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
 
     let _result: sqlx::mysql::MySqlQueryResult = sqlx::query(
-        "INSERT INTO auth_tokens (
+        "INSERT INTO auth_codes (
             user_id,
             client_id,
-            token,
+            code,
             created_timestamp,
             expires_timestamp)
         VALUES (?, ?, ?, ?, ?)")
     .bind(user_id)
     .bind(client_id)
-    .bind(&auth_token)
+    .bind(&auth_code)
     .bind(created_timestamp)
     .bind(expires_timestamp)
     .execute(&pool).await.map_err(|e| {
-        eprintln!("Failed to save auth_token to database: {:?}", e);
-        anyhow!("Could not save auth_token to database: {e}")
+        eprintln!("Failed to save auth_code to database: {:?}", e);
+        anyhow!("Could not save auth_code to database: {e}")
     })?;
 
     // Return the auth_token, because now it's safe to use (saved to DB)
-    Ok(auth_token)
+    Ok(auth_code)
  }
 
 
