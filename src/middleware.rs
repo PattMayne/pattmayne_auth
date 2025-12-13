@@ -121,10 +121,11 @@ async fn get_user_req_data_from_opt(
             let r_tkn_ckie: actix_web::cookie::Cookie<'_> = r_token_optn.unwrap();
 
             // check DB for refresh_token to compare
-            let r_db_token_result: Result<Option<db::RefreshToken>, anyhow::Error> = db::get_refresh_token(
-                claims.get_sub(),
-                utils::auth_client_id()
-            ).await;
+            let r_db_token_result: Result<Option<db::RefreshToken>, anyhow::Error> =
+                db::get_refresh_token(
+                    claims.get_sub(),
+                    utils::auth_client_id()
+                ).await;
 
             if let Err(e) = r_db_token_result {
                 return Err(error::ErrorInternalServerError(e.to_string()));
@@ -132,7 +133,7 @@ async fn get_user_req_data_from_opt(
 
             let r_db_token_option: Option<db::RefreshToken> = r_db_token_result.unwrap();
             if r_db_token_option.is_none() { return Ok(guest_data); }
-            let r_db_token = r_db_token_option.unwrap();
+            let r_db_token: db::RefreshToken = r_db_token_option.unwrap();
 
             let r_tkn_valid: bool = 
                 r_tkn_ckie.value() == r_db_token.get_token() &&

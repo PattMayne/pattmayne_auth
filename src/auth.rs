@@ -373,7 +373,9 @@ pub async fn verify_jwt(token: &str) -> JwtVerification {
         Err(e) => match *e.kind() {
             ErrorKind::ExpiredSignature => {
                 match insecure_decode::<Claims>(token) {
-                    Ok(token_data) => JwtVerification::Expired(token_data.claims),
+                    Ok(token_data) => {
+                        JwtVerification::Expired(token_data.claims)
+                    },
                     Err(_e) => JwtVerification::Invalid
                 }
             },

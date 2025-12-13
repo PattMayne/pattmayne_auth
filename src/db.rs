@@ -177,6 +177,12 @@ impl RefreshToken {
     }
 }
 
+impl AuthCodeData {
+    pub fn is_expired(&self) -> bool {
+        self.expires_timestamp < OffsetDateTime::now_utc()
+    }
+}
+
 
 impl User {
 
@@ -252,14 +258,14 @@ impl User {
  */
 
 
- pub async fn get_auth_code_data(client_id: &String) -> Result<Option<AuthCodeData>> {
+ pub async fn get_auth_code_data(code: &String) -> Result<Option<AuthCodeData>> {
     let pool: MySqlPool = create_pool().await?;
 
     Ok(sqlx::query_as!(
             AuthCodeData,
             "SELECT id, user_id, client_id, code, expires_timestamp
-            FROM auth_codes WHERE client_id = ?",
-            client_id
+            FROM auth_codes WHERE code = ?",
+            code
         ).fetch_optional(&pool).await?)
  }
 

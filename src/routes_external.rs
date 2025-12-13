@@ -1,10 +1,9 @@
-use serde::{ Deserialize, Serialize };
+use serde::{ Serialize };
 use actix_web::{
     web, HttpResponse, HttpRequest,
-    Responder, http::StatusCode, http::header,
-    get, post, web::Redirect };
+    http::StatusCode, post };
 
-    use crate::{ db, auth, utils,
+    use crate::{ db, auth,
         auth_code_shared::{
             AuthCodeSuccess,
             AuthCodeError,
@@ -79,7 +78,7 @@ async fn verify_auth_code(req: HttpRequest, inputs: web::Json<AuthCodeRequest>) 
      * We will need a custom error struct
      */
 
-    let auth_code_data: db::AuthCodeData = match db::get_auth_code_data(&inputs.client_id).await {
+    let auth_code_data: db::AuthCodeData = match db::get_auth_code_data(&inputs.code).await {
         Ok(option) => {
             match option {
                 Some(data) => data,
@@ -88,6 +87,13 @@ async fn verify_auth_code(req: HttpRequest, inputs: web::Json<AuthCodeRequest>) 
         },
         Err(_e) => { return ext_internal_err_json() }
     };
+
+    // Make sure it's not expired
+    if auth_code_data.is_expired() {
+        eprint!("Expired auth code");
+        println!("auth code id: {}", auth_code_data.id);
+        return ext_authentication_err_json();
+    }
 
     // GOT the auth_code_data. Now check it against the input data
     // make sure client_id and client_secret are the right ones.
@@ -148,7 +154,7 @@ async fn verify_auth_code(req: HttpRequest, inputs: web::Json<AuthCodeRequest>) 
     }
 
 
-        println!("FAILURE: NO MATCH");
+    println!("FAILURE: NO MATCH");
     // RETURN FAILURE
     ext_authentication_err_json()
 }

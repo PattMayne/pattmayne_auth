@@ -505,7 +505,7 @@ async fn login_post(
             db::get_user_by_username(&info.username_or_email).await
     };
 
-    let user = match user_result {
+    let user: db::User = match user_result {
         Ok(Some(user)) => {
 
             // Now check the input password against password from DB

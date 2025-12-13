@@ -1,8 +1,7 @@
 use actix_web::{
-    web, HttpResponse, HttpRequest,
-    Responder, http::StatusCode, http::header,
-    get, post, web::Redirect };
-use serde::{ Deserialize, Serialize };
+    HttpResponse, http::StatusCode
+};
+use serde::{ Serialize };
 
 
 #[derive(Serialize)]
