@@ -53,7 +53,7 @@ const submit_login = async () => {
             return response.json()
         }).then(data => {
             console.log("data: ", data)
-            if (!!data.user_id){
+            if (!!data.username){
                 window.location.href = "/dashboard";
             } else if (!!data.redirect_uri) {
                 window.location.href = data.redirect_uri;
