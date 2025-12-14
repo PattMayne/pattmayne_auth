@@ -282,6 +282,15 @@ impl ClientInputs {
     }
 }
 
+// OTHER STRUCTS
+
+
+struct TwoAuthCookies {
+    pub jwt_cookie: Cookie<'static>,
+    pub refresh_token_cookie: Cookie<'static>,
+}
+
+
 
 /* 
  * 
@@ -469,7 +478,20 @@ async fn register_post(
     match db::get_user_by_id(user_id).await {
         Ok(Some(user)) => {
             // User may now receive JWT and refresh token.
-            return give_user_auth_cookies(user).await;
+            match get_user_auth_cookies(&user).await {
+                Ok(cookies) => {
+
+                    return HttpResponse::Ok()
+                        .cookie(cookies.jwt_cookie)
+                        .cookie(cookies.refresh_token_cookie)
+                        .json(FreshLoginData {
+                            username: user.get_username().to_owned()
+                    });
+                },
+                Err(error_response) => {
+                    HttpResponse::InternalServerError().json(error_response)
+                }
+            }
         },
         Ok(None) => {
             let code: u16 = 404;
@@ -555,12 +577,25 @@ async fn login_post(
     // create auth_token if site is external
     println!("Client id: {}", info.client_id);
 
+    // get cookies for local login
+    let two_auth_cookies: TwoAuthCookies = match get_user_auth_cookies(&user).await {
+        Ok(cookies) => cookies,
+        Err(error_response) => {
+            return HttpResponse::InternalServerError().json(error_response);
+        }
+    };
+
     /* 
-     * IF client_id is auth_site give_user_auth_cookies
+     * IF client_id is auth_site login now and redirect
      */
     if info.client_id == utils::auth_client_id() {
         // User may now receive JWT and refresh token.
-        return give_user_auth_cookies(user).await;
+        return HttpResponse::Ok()
+            .cookie(two_auth_cookies.jwt_cookie)
+            .cookie(two_auth_cookies.refresh_token_cookie)
+            .json(FreshLoginData {
+                username: user.get_username().to_owned()
+        });
     }
 
     // It's an external site. So let's get an auth_token and redirect
@@ -596,7 +631,10 @@ async fn login_post(
 
             // Set cookies.
 
-            HttpResponse::Ok().json(full_uri)
+            HttpResponse::Ok()
+                .cookie(two_auth_cookies.jwt_cookie)
+                .cookie(two_auth_cookies.refresh_token_cookie)
+                .json(full_uri)
         },
         None => {
             let code: u16 = 404;
@@ -885,66 +923,6 @@ async fn update_client_post(
                 error: String::from("Invalid Inputs"),
                 code: 406
             })
-    }
-}
-
-
-
-/**
- * We only do this once the user has been authenticated.
- * Calls functions to generate JWT and refresh token,
- * puts them in cookies and sends the response,
- * along with some user info in a JSON.
- */
-async fn give_user_auth_cookies(user: db::User) -> HttpResponse {
-    // generate JWT. Don't send user obj (with password) back
-    let jwt_err_500 = HttpResponse::InternalServerError().json(
-        ErrorResponse {
-            error: String::from("Access Token Generation Error."),
-            code: 500
-    });
-
-    // Generate a token String
-    let jwt: String = match auth::generate_jwt(
-        user.get_id(),
-        user.get_username().to_owned(),
-        user.get_role().to_owned()
-    ) {
-        Ok(token) => token,
-        Err(e) => {
-            eprint!("Internal Server Error: {e}");
-            return jwt_err_500;
-        }
-    };
-
-    // create a refresh_token and put it in the DB
-    match db::add_refresh_token(
-        user.get_id(),
-        utils::auth_client_id(),
-        auth::generate_refresh_token()
-    ).await {
-        Ok(refresh_token) => {
-            // Refresh token successfully inserted into DB
-            // Now make the cookies and set them in the response
-            let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
-                jwt,
-                String::from("jwt"));
-            
-            let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
-                refresh_token,
-                String::from("refresh_token"));
-
-            return HttpResponse::Ok()
-                .cookie(jwt_cookie)
-                .cookie(refresh_token_cookie)
-                .json(FreshLoginData {
-                    username: user.get_username().to_owned()
-            });
-        },
-        Err(e) => {
-            eprint!("Internal Server Error: {e}");
-            jwt_err_500
-        }
     }
 }
 
@@ -1438,17 +1416,17 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
         Ok(option) => {
             match option {
                 Some(data) => data,
-                None => { return ext_not_found_err_json() }
+                None => { return return_not_found_err_json() }
             }
         },
-        Err(_e) => { return ext_internal_err_json() }
+        Err(_e) => { return return_internal_err_json() }
     };
 
     // Make sure it's not expired
     if auth_code_data.is_expired() {
         eprint!("Expired auth code");
         println!("auth code id: {}", auth_code_data.id);
-        return ext_authentication_err_json();
+        return return_authentication_err_json();
     }
 
     // GOT the auth_code_data. Now check it against the input data
@@ -1458,10 +1436,10 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
         Ok(option) => {
             match option {
                 Some(secret_obj) => secret_obj.hashed_client_secret,
-                None => { return ext_not_found_err_json() }
+                None => { return return_not_found_err_json() }
             }
         },
-        Err(_e) => { return ext_internal_err_json() }
+        Err(_e) => { return return_internal_err_json() }
     };
 
     let secrets_match: bool = auth::verify_password(&inputs.client_secret, &hashed_client_secret);
@@ -1477,10 +1455,10 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
             Ok(option) => {
                 match option {
                     Some(username_obj) => username_obj.username,
-                    None => { return ext_not_found_err_json() }
+                    None => { return return_not_found_err_json() }
                 }
             },
-            Err(_e) => { return ext_internal_err_json() }
+            Err(_e) => { return return_internal_err_json() }
         };
 
         // CREATE the refresh token and save to DB
@@ -1491,7 +1469,7 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
             auth::generate_refresh_token()
         ).await {
             Ok(refresh_token) => refresh_token,
-            Err(_e) =>  return ext_internal_err_json()
+            Err(_e) =>  return return_internal_err_json()
         };
 
 
@@ -1512,42 +1490,9 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
 
     println!("FAILURE: NO MATCH");
     // RETURN FAILURE
-    ext_authentication_err_json()
+    return_authentication_err_json()
 }
 
-
-// If something is not found
-pub fn ext_not_found_err_json() -> HttpResponse {
-    HttpResponse::Unauthorized().json(AuthCodeError{
-        message: String::from("Not Found"),
-        error_code: 406
-    })
-}
-
-
-/**
- * Sometimes we don't know what went wrong and we need to return a JSON
- * object which says so.
- */
-pub fn ext_internal_err_json() -> HttpResponse {
-    HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
-        .json(AuthCodeResponse::Err(
-            AuthCodeError{
-                message: String::from("Internal server error"),
-                error_code: 500
-        }))
-}
-
-
-
-// authentication failed
-pub fn ext_authentication_err_json() -> HttpResponse {
-    HttpResponse::Unauthorized().json(AuthCodeResponse::Err(
-        AuthCodeError{
-            message: String::from("Authentication required"),
-            error_code: 401
-    }))
-}
 
 
 
@@ -1629,8 +1574,6 @@ fn redirect_non_admin(
 }
 
 
-
-
 /**
  * Sometimes we don't know what went wrong and we need to return a JSON
  * object which says so.
@@ -1658,4 +1601,63 @@ pub fn return_not_found_err_json() -> HttpResponse {
         error: String::from("Not Found"),
         code: 406
     })
+}
+
+
+/**
+ * We only do this once the user has been authenticated.
+ * Calls functions to generate JWT and refresh token,
+ * puts them in cookies and sends the response,
+ * along with some user info in a JSON.
+ * 
+ * 
+ */
+async fn get_user_auth_cookies(user: &db::User) -> Result<TwoAuthCookies, ErrorResponse> {
+    // generate JWT. Don't send user obj (with password) back
+    let jwt_err_500: ErrorResponse = ErrorResponse {
+        error: String::from("Access Token Generation Error."),
+        code: 500
+    };
+
+    // Generate a token String
+    let jwt: String = match auth::generate_jwt(
+        user.get_id(),
+        user.get_username().to_owned(),
+        user.get_role().to_owned()
+    ) {
+        Ok(token) => token,
+        Err(e) => {
+            eprint!("Internal Server Error: {e}");
+            return Err(jwt_err_500)
+        }
+    };
+
+    // create a refresh_token and put it in the DB
+    match db::add_refresh_token(
+        user.get_id(),
+        utils::auth_client_id(),
+        auth::generate_refresh_token()
+    ).await {
+        Ok(refresh_token) => {
+            // Refresh token successfully inserted into DB
+            // Now make the cookies and set them in the response
+            let jwt_cookie: Cookie<'_> = auth::build_token_cookie(
+                jwt,
+                String::from("jwt"));
+            
+            let refresh_token_cookie: Cookie<'_> = auth::build_token_cookie(
+                refresh_token,
+                String::from("refresh_token"));
+            
+            let two_auth_cookies: TwoAuthCookies = TwoAuthCookies {
+                jwt_cookie, refresh_token_cookie
+            };
+
+            Ok(two_auth_cookies)
+        },
+        Err(e) => {
+            eprint!("Internal Server Error: {e}");
+            Err(jwt_err_500)
+        }
+    }
 }
