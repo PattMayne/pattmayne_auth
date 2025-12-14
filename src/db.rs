@@ -73,6 +73,13 @@ pub struct Username {
 
 
 #[derive(serde::Serialize)]
+pub struct UsernameAndRole {
+    pub username: String,
+    pub role: String,
+}
+
+
+#[derive(serde::Serialize)]
 pub struct RefreshToken {
     id: i32,
     user_id: i32,
@@ -258,7 +265,7 @@ impl User {
  */
 
 
- pub async fn get_auth_code_data(code: &String) -> Result<Option<AuthCodeData>> {
+pub async fn get_auth_code_data(code: &String) -> Result<Option<AuthCodeData>> {
     let pool: MySqlPool = create_pool().await?;
 
     Ok(sqlx::query_as!(
@@ -324,6 +331,18 @@ pub async fn get_username_by_id(id: i32) -> Result<Option<Username>> {
         id
     ).fetch_optional(&pool).await?)
 }
+
+
+pub async fn get_username_and_role_by_id(id: i32) -> Result<Option<UsernameAndRole>> {
+    let pool: MySqlPool = create_pool().await?;
+
+    Ok(sqlx::query_as!(
+        UsernameAndRole,
+        "SELECT username, role FROM users WHERE id = ?",
+        id
+    ).fetch_optional(&pool).await?)
+}
+
 
 
 pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {

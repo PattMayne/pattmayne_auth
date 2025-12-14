@@ -648,15 +648,6 @@ async fn login_post(
 
 
 
-/*
-            return HttpResponse::Ok()
-                .cookie(jwt_cookie)
-                .cookie(refresh_token_cookie)
-                .json(FreshLoginData {
-                    user_id: user.get_id(),
-                    username: user.get_username().to_owned()
-            }); */
-
 /**
  * The admin can update the client secret.
  * They receive the raw (unhashed) secret ONCE and they must put that
@@ -1451,10 +1442,12 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
 
         println!("SUCCESS: ALL MATCH");
 
-        let username = match db::get_username_by_id(auth_code_data.user_id).await {
+        let username_and_role: db::UsernameAndRole =
+            match db::get_username_and_role_by_id(auth_code_data.user_id).await
+        {
             Ok(option) => {
                 match option {
-                    Some(username_obj) => username_obj.username,
+                    Some(data_obj) => data_obj,
                     None => { return return_not_found_err_json() }
                 }
             },
@@ -1475,7 +1468,8 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
 
         let user_data: AuthCodeSuccess = AuthCodeSuccess {
             user_id: auth_code_data.user_id,
-            username,
+            username: username_and_role.username,
+            user_role: username_and_role.role,
             refresh_token
         };
 
