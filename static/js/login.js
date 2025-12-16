@@ -1,5 +1,6 @@
 $(document).foundation()
 import * as utils from './utils.js'
+import * as globals from './globals.js'
 
 
 /**

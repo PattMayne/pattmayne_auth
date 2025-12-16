@@ -67,6 +67,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/ext_auth")
                     .service(routes::verify_auth_code)
+                    .service(routes::check_refresh)
             )
             .default_service(web::get().to(routes::not_found)) // <- catch-all
             .wrap(from_fn(middleware::jwt_cookie_middleware))

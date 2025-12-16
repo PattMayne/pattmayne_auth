@@ -35,9 +35,11 @@ use crate::{
      },
      auth_code_shared::{
             AuthCodeSuccess,
-            AuthCodeError,
             AuthCodeRequest,
-            AuthCodeResponse,
+            RefreshCheckRequest,
+            RefreshCheckError,
+            RefreshCheckSuccess,
+            RefreshCheckResponse
         }
 };
 
@@ -70,7 +72,6 @@ struct UserData {
     username: String,
     refresh_token: String,
 }
-
 
 
 #[derive(Serialize)]
@@ -158,7 +159,6 @@ impl BadNames {
         }
     }
 }
-
 
 impl BadPassword {
     pub fn new(code: u16) -> Self {
@@ -1488,7 +1488,40 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
 }
 
 
+/**
+ * when a user on a client app checks their refresh_token (in the cookies on the client app)
+ * against the refresh token saved in the database.
+ */
+#[post("/check_refresh")]
+async fn check_refresh(inputs: web::Json<RefreshCheckRequest>) -> HttpResponse {
+    let err_response: HttpResponse = HttpResponse::Ok()
+        .json(RefreshCheckResponse::Err(RefreshCheckError {
+            error_code: 500,
+            message: "Server Error".to_string()
+        }));
 
+    // get the inputs and check them all
+
+    let r_db_token: db::RefreshToken =
+        match db::get_refresh_token(inputs.user_id, inputs.client_id.to_owned()).await {
+            Ok(option) => {
+                match option {
+                    Some(token) => token,
+                    None => return err_response
+                }
+            }, Err(_e) => return err_response
+        };
+
+    let token_is_valid: bool = 
+        inputs.token.as_str() == r_db_token.get_token() &&
+        !r_db_token.is_expired();
+
+    let token_response: RefreshCheckResponse =
+        RefreshCheckResponse::Ok(RefreshCheckSuccess::new(token_is_valid));
+
+    return HttpResponse::Ok()
+        .json(token_response);
+}
 
 
 
