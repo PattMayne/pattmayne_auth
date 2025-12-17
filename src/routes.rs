@@ -205,6 +205,11 @@ impl SendToError {
 
 
 #[derive(Deserialize)]
+pub struct LoginQuery {
+    pub client_id: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct ClientId {
     client_id: String,
 }
@@ -326,6 +331,7 @@ struct LoginTemplate {
     user: auth::UserReqData,
     client_refs: Vec<db::ClientRef>,
     login_is_available: bool,
+    selected_client_id: String,
 }
 
 #[derive(Template)]
@@ -1108,7 +1114,10 @@ pub fn redirect_to_err(err_code: String) -> impl Responder {
 
 
 /* LOGIN PAGE ROUTE FUNCTION */
-pub async fn login_page(req: HttpRequest) -> impl Responder {
+pub async fn login_page(
+    req: HttpRequest,
+    query: web::Query<LoginQuery>
+) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // Get client site references to list on login site
@@ -1120,6 +1129,11 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
         }
     };
 
+    let selected_client_id = match &query.client_id {
+        Some(client_id) => client_id.to_owned(),
+        None => "".to_string()
+    };
+
     // Make sure there's a site to login to.
     let login_is_available: bool = client_refs.len() > 0;
 
@@ -1128,6 +1142,7 @@ pub async fn login_page(req: HttpRequest) -> impl Responder {
         user: user_req_data,
         client_refs,
         login_is_available,
+        selected_client_id,
     };
 
     HttpResponse::Ok()
