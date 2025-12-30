@@ -1027,19 +1027,21 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
         None => 0
     };
 
+    // delete cookies
+    
     let jwt_cookie: Cookie<'_> = Cookie::build("jwt", "")
         .path("/")
         .max_age(time::Duration::seconds(0))
         .http_only(true)
         .finish();
 
-    // Must also delete refresh_token from DB (currently doesn't exist anyway)
     let refresh_cookie: Cookie<'_> = Cookie::build("refresh_token", "")
         .path("/")
         .max_age(time::Duration::seconds(0))
         .http_only(true)
         .finish();
 
+    // delete refresh_token from DB
     match db::delete_refresh_token(user_id).await {
         Ok(_rows_deleted) => {},
         Err(e) => {eprint!("Database error: {e}")}

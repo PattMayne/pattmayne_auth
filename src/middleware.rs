@@ -211,5 +211,3 @@ pub async fn jwt_cookie_middleware<B>(
     }
     Ok(res)
 }
-
-
