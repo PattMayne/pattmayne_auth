@@ -1391,7 +1391,6 @@ async fn error_root_2() -> HttpResponse {
 */
 
 
-
 #[post("/verify_auth_code")]
 async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
 
@@ -1481,7 +1480,6 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
             Ok(refresh_token) => refresh_token,
             Err(_e) =>  return return_internal_err_json()
         };
-
 
         let user_data: AuthCodeSuccess = AuthCodeSuccess {
             user_id: auth_code_data.user_id,

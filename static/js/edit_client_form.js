@@ -64,8 +64,8 @@ const submit_data = async () => {
             if(!response.ok) {
                 response.json().then(data => {
                     if (!!data.code && data.code == 403 || data.code == 401) {
-                        const redirect_uri = "/error/" + data.code;
-                        window.location.href = redirect_uri;
+                        const redirect_uri = "/error/" + data.code
+                        window.location.href = redirect_uri
                     } else {
                         let msg = (!!data.code) ? (data.code.toString() + " ") : ""
                         msg += (!!data.error) ? data.error : " Error occurred"
