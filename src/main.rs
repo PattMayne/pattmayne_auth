@@ -13,6 +13,7 @@ mod middleware;
 mod resources;
 mod resource_mgr;
 mod auth_code_shared;
+mod routes_utils;
 
 
 /**

@@ -107,13 +107,13 @@ async fn get_user_req_data_from_opt(
             // JWT is expired but otherwise valid.
             // set an object in the req to send a new cookie
             /* 
-                * PROCESS:
-                * => check REFRESH TOKEN
-                * => if that is valid (and non-expired):
-                * ====> set FLAG for setting the new JWT
-                * => ELSE
-                * ====> set FLAG to make user log in again
-                */
+             * PROCESS:
+             * => check REFRESH TOKEN
+             * => if that is valid (and non-expired):
+             * ====> set FLAG for setting the new JWT
+             * => ELSE
+             * ====> set FLAG to make user log in again
+            */
             
             // Check the cookies for a refresh_token
             let r_token_optn = req.cookie("refresh_token");
