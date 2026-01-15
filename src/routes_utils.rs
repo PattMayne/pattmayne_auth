@@ -1,3 +1,22 @@
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ==========================
+ * ==========================
+ * =====                =====
+ * =====  ROUTES UTILS  =====
+ * =====                =====
+ * ==========================
+ * ==========================
+ * 
+ * Functions and structs to support the routes.rs module.
+ * 
+ * 
+*/
+
+
 use actix_web::{
     HttpResponse, HttpRequest, web::Redirect,
     Responder, http::StatusCode, http::header };
@@ -16,24 +35,6 @@ use crate::{
      }
 };
 
-
-/* 
- * 
- * 
- * 
- * 
- * ==========================
- * ==========================
- * =====                =====
- * =====  ROUTES UTILS  =====
- * =====                =====
- * ==========================
- * ==========================
- * 
- * Functions and structs to support the routes.rs module.
- * 
- * 
-*/
 
 /* 
  * 
