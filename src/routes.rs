@@ -22,6 +22,7 @@ use actix_web::{
     get, post, web::Redirect };
 use actix_web::cookie::{ Cookie };
 use askama::Template;
+use sqlx::{ MySqlPool };
 
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::{
@@ -74,6 +75,7 @@ use crate::{
 */
 #[post("/register")]
 async fn register_post(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     info: web::Json<RegisterCredentials>
 ) -> HttpResponse {    
@@ -102,8 +104,8 @@ async fn register_post(
      * Do a pre-check first.
     */
 
-    let username_exists = db::username_taken(&info.username).await;
-    let email_exists = db::email_taken(&info.email).await;
+    let username_exists: bool = db::username_taken(&pool, &info.username).await;
+    let email_exists: bool = db::email_taken(&pool, &info.email).await;
     let username_or_email_already_exists: bool = username_exists || email_exists;
 
     if username_or_email_already_exists {
@@ -121,6 +123,7 @@ async fn register_post(
     // We can still send errors if there's a duplicate or a problem
     
     let user_id_result: Result<i32, anyhow::Error> = db::add_user(
+        &pool,
         &info.username,
         &info.email,
         info.password.clone()
@@ -138,10 +141,10 @@ async fn register_post(
     };
 
     // get user object from DB
-    match db::get_user_by_id(user_id).await {
+    match db::get_user_by_id(&pool, user_id).await {
         Ok(Some(user)) => {
             // User may now receive JWT and refresh token.
-            match get_user_auth_cookies(&user).await {
+            match get_user_auth_cookies(&pool, &user).await {
                 Ok(cookies) => {
 
                     return HttpResponse::Ok()
@@ -177,6 +180,7 @@ async fn register_post(
 */
 #[post("/login")]
 async fn login_post(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     info: web::Json<LoginCredentials>
 ) -> HttpResponse {
@@ -206,9 +210,9 @@ async fn login_post(
     // retrieve by username)
     let user_result: Result<Option<db::User>, anyhow::Error> =
         if utils::validate_email(&info.username_or_email) {
-            db::get_user_by_email(&info.username_or_email).await
+            db::get_user_by_email(&pool, &info.username_or_email).await
         } else {
-            db::get_user_by_username(&info.username_or_email).await
+            db::get_user_by_username(&pool, &info.username_or_email).await
     };
 
     let user: db::User = match user_result {
@@ -241,7 +245,7 @@ async fn login_post(
     println!("Client id: {}", info.client_id);
 
     // get cookies for local login
-    let two_auth_cookies: TwoAuthCookies = match get_user_auth_cookies(&user).await {
+    let two_auth_cookies: TwoAuthCookies = match get_user_auth_cookies(&pool, &user).await {
         Ok(cookies) => cookies,
         Err(error_response) => {
             return HttpResponse::InternalServerError().json(error_response);
@@ -263,6 +267,7 @@ async fn login_post(
 
     // It's an external site. So let's get an auth_token and redirect
     let auth_code: String = match db::add_auth_code(
+        &pool,
         user.get_id(),
         &info.client_id,
         auth::generate_auth_code()
@@ -274,7 +279,7 @@ async fn login_post(
     println!("Auth code: {}", auth_code);
 
     let redirect_uri_option: Option<String>  =
-        match db::get_redirect_uri(&info.client_id).await {
+        match db::get_redirect_uri(&pool, &info.client_id).await {
             Ok(option) => option,
             Err(_e) => return server_error
     };
@@ -319,6 +324,7 @@ async fn login_post(
  */
 #[post("/req_new_client_secret")]
 async fn req_secret_post(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     inputs: web::Json<ClientId>
 ) -> HttpResponse {
@@ -337,7 +343,11 @@ async fn req_secret_post(
        raw_client_secret_json.raw_client_secret.to_owned()
     ).to_owned();
 
-    match db::update_client_secret(&inputs.client_id, &hashed_client_secret).await {
+    match db::update_client_secret(
+        &pool,
+        &inputs.client_id,
+        &hashed_client_secret
+    ).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 HttpResponse::Ok()
@@ -361,6 +371,7 @@ async fn req_secret_post(
  */
 #[post("/add_client")]
 async fn new_client_post(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     mut inputs: web::Json<ClientInputs>
 ) -> HttpResponse {
@@ -437,7 +448,7 @@ async fn new_client_post(
     };
 
     let new_client_result: Result<u64, anyhow::Error> =
-        db::add_external_client(client_data).await;
+        db::add_external_client(&pool, client_data).await;
     
     match new_client_result {
         Ok(rows_affected) => {
@@ -472,6 +483,7 @@ async fn new_client_post(
  */
 #[post("/update_client")]
 async fn update_client_post(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     mut inputs: web::Json<ClientInputs>
 ) -> HttpResponse {
@@ -547,7 +559,7 @@ async fn update_client_post(
         };
     
         let update_client_result: Result<i32, anyhow::Error> =
-            db::update_external_client(client_data).await;
+            db::update_external_client(&pool, client_data).await;
         
         match update_client_result {
             Ok(rows_affected) => {
@@ -582,7 +594,11 @@ async fn update_client_post(
 
 
 #[post("/update_password")]
-pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPassword>) -> HttpResponse {
+pub async fn update_password(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest,
+    password_obj: web::Json<NewPassword>
+) -> HttpResponse {
 
     // make sure user is logged in
     let user_id: i32 = match auth::get_user_req_data(&req).id {
@@ -590,7 +606,7 @@ pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPasswo
         None => return return_authentication_err_json()
     };
 
-    match db::get_user_by_id(user_id).await {
+    match db::get_user_by_id(&pool, user_id).await {
         Ok(Some(_user)) =>{
             // User is real user
             // check credentials against regex and size ranges
@@ -605,7 +621,11 @@ pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPasswo
 
             // Names are valid. Update the DB
             let update_password_result: Result<i32, anyhow::Error> =
-                db::update_password(&password_obj.password, user_id).await;
+                db::update_password(
+                    &pool,
+                    &password_obj.password,
+                    user_id
+                ).await;
             
             match update_password_result {
                 Ok(rows_affected) => {
@@ -626,7 +646,11 @@ pub async fn update_password(req: HttpRequest, password_obj: web::Json<NewPasswo
 
 
 #[post("/update_names")]
-pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> HttpResponse {
+pub async fn update_names(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest,
+    names: web::Json<RealNames>
+) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // make sure user is logged in
@@ -635,7 +659,7 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
         None => return return_authentication_err_json()
     };
 
-    match db::get_user_by_id(user_id).await {
+    match db::get_user_by_id(&pool, user_id).await {
         Ok(Some(_user)) => {
             // User is real user
             // get json from the req, and names from json
@@ -655,6 +679,7 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
             // Names are valid. Update the DB
             let update_names_result: Result<i32, anyhow::Error> =
                 db::update_real_names(
+                    &pool,
                     &names.first_name,
                     &names.last_name,
                     user_id
@@ -677,7 +702,10 @@ pub async fn update_names(req: HttpRequest, names: web::Json<RealNames>) -> Http
 
 
 #[post("/logout")]
-pub async fn logout_post(req: HttpRequest) -> HttpResponse {
+pub async fn logout_post(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest
+) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
     let user_id = match user_req_data.id {
         Some(id) => id,
@@ -699,7 +727,7 @@ pub async fn logout_post(req: HttpRequest) -> HttpResponse {
         .finish();
 
     // delete refresh_token from DB
-    match db::delete_refresh_token(user_id).await {
+    match db::delete_refresh_token(&pool, user_id).await {
         Ok(_rows_deleted) => {},
         Err(e) => {eprint!("Database error: {e}")}
     }
@@ -769,19 +797,21 @@ async fn home(req: HttpRequest) -> HttpResponse {
 
 /* LOGIN PAGE ROUTE FUNCTION */
 pub async fn login_page(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     query: web::Query<LoginQuery>
 ) -> impl Responder {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     // Get client site references to list on login site
-    let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
-        Ok(refs) => refs,
-        Err(e) => {
-            eprintln!("Error retrieving client references: {e}");
-            Vec::new()
-        }
-    };
+    let client_refs: Vec<db::ClientRef> =
+        match db::get_client_refs(&pool).await {
+            Ok(refs) => refs,
+            Err(e) => {
+                eprintln!("Error retrieving client references: {e}");
+                Vec::new()
+            }
+        };
 
     let selected_client_id = match &query.client_id {
         Some(client_id) => client_id.to_owned(),
@@ -824,7 +854,10 @@ pub async fn register_page(req: HttpRequest) -> impl Responder {
  * Main admin dashboard
  * if user just goes to /auth
  */
-pub async fn admin_home(req: HttpRequest) -> impl Responder {
+pub async fn admin_home(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest
+) -> impl Responder {
     println!("ADMIN HOME");
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
@@ -834,13 +867,14 @@ pub async fn admin_home(req: HttpRequest) -> impl Responder {
     }
     
     // Get client site references to list on admin site
-    let client_refs: Vec<db::ClientRef> = match db::get_client_refs().await {
-        Ok(refs) => refs,
-        Err(e) => {
-            eprintln!("Error retrieving client references: {e}");
-            Vec::new()
-        }
-    };
+    let client_refs: Vec<db::ClientRef> =
+        match db::get_client_refs(&pool).await {
+            Ok(refs) => refs,
+            Err(e) => {
+                eprintln!("Error retrieving client references: {e}");
+                Vec::new()
+            }
+        };
 
     let admin_template: AdminTemplate = AdminTemplate {
         texts: AdminTexts::new(&user_req_data),
@@ -889,6 +923,7 @@ pub async fn new_client_site_form_page(req: HttpRequest) -> impl Responder {
  */
 #[get("/edit_client/{auth_id}")]
 pub async fn edit_client_site_form_page(
+    pool: web::Data<MySqlPool>,
     req: HttpRequest,
     auth_id: web::Path<String>
 ) -> impl Responder {
@@ -901,7 +936,7 @@ pub async fn edit_client_site_form_page(
 
     // Get the requested client site data
     let client_data_result: Result<Option<db::ClientData>, anyhow::Error> =
-        db::get_client_by_client_id(&auth_id).await;
+        db::get_client_by_client_id(&pool, &auth_id).await;
 
     if client_data_result.is_err() {
         return return_error_page(&req, 404);
@@ -928,7 +963,10 @@ pub async fn edit_client_site_form_page(
  * Main page for user account info.
  * */
 #[get("/dashboard")]
-pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
+pub async fn dashboard_page(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest
+) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
 
     if user_req_data.id.is_none() {
@@ -937,7 +975,7 @@ pub async fn dashboard_page(req: HttpRequest) -> HttpResponse {
 
     let id: i32 = user_req_data.id.unwrap();
 
-    match db::get_user_by_id(id).await {
+    match db::get_user_by_id(&pool, id).await {
         Ok(Some(user)) =>{
             let dashboard_template: DashboardTemplate<'_> = DashboardTemplate {
                 user_data: &user,
@@ -1042,7 +1080,10 @@ async fn error_root_2() -> HttpResponse {
 
 
 #[post("/verify_auth_code")]
-async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
+async fn verify_auth_code(
+    pool: web::Data<MySqlPool>,
+    inputs: web::Json<AuthCodeRequest>
+) -> HttpResponse {
 
     println!("Code: {}", inputs.code);
     println!("Id: {}", inputs.client_id);
@@ -1069,15 +1110,16 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
      * We will need a custom error struct
      */
 
-    let auth_code_data: db::AuthCodeData = match db::get_auth_code_data(&inputs.code).await {
-        Ok(option) => {
-            match option {
-                Some(data) => data,
-                None => { return return_not_found_err_json() }
-            }
-        },
-        Err(_e) => { return return_internal_err_json() }
-    };
+    let auth_code_data: db::AuthCodeData =
+        match db::get_auth_code_data(&pool, &inputs.code).await {
+            Ok(option) => {
+                match option {
+                    Some(data) => data,
+                    None => { return return_not_found_err_json() }
+                }
+            },
+            Err(_e) => { return return_internal_err_json() }
+        };
 
     // Make sure it's not expired
     if auth_code_data.is_expired() {
@@ -1089,15 +1131,16 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
     // GOT the auth_code_data. Now check it against the input data
     // make sure client_id and client_secret are the right ones.
 
-    let hashed_client_secret: String = match db::get_client_secret(&inputs.client_id).await {
-        Ok(option) => {
-            match option {
-                Some(secret_obj) => secret_obj.hashed_client_secret,
-                None => { return return_not_found_err_json() }
-            }
-        },
-        Err(_e) => { return return_internal_err_json() }
-    };
+    let hashed_client_secret: String =
+        match db::get_client_secret(&pool, &inputs.client_id).await {
+            Ok(option) => {
+                match option {
+                    Some(secret_obj) => secret_obj.hashed_client_secret,
+                    None => { return return_not_found_err_json() }
+                }
+            },
+            Err(_e) => { return return_internal_err_json() }
+        };
 
     let secrets_match: bool = auth::verify_password(&inputs.client_secret, &hashed_client_secret);
     let client_ids_match: bool = inputs.client_id == auth_code_data.client_id;
@@ -1105,24 +1148,23 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
     // TODO: check auth_code EXPIRY date
 
     if secrets_match && client_ids_match {
-
         println!("SUCCESS: ALL MATCH");
 
         let username_and_role: db::UsernameAndRole =
-            match db::get_username_and_role_by_id(auth_code_data.user_id).await
-        {
-            Ok(option) => {
-                match option {
-                    Some(data_obj) => data_obj,
-                    None => { return return_not_found_err_json() }
-                }
-            },
-            Err(_e) => { return return_internal_err_json() }
-        };
+            match db::get_username_and_role_by_id(&pool, auth_code_data.user_id).await {
+                Ok(option) => {
+                    match option {
+                        Some(data_obj) => data_obj,
+                        None => { return return_not_found_err_json() }
+                    }
+                },
+                Err(_e) => { return return_internal_err_json() }
+            };
 
         // CREATE the refresh token and save to DB
         // create a refresh_token and put it in the DB
         let refresh_token: String = match db::add_refresh_token(
+            &pool,
             auth_code_data.user_id,
             auth_code_data.client_id,
             auth::generate_refresh_token()
@@ -1158,7 +1200,10 @@ async fn verify_auth_code(inputs: web::Json<AuthCodeRequest>) -> HttpResponse {
  * against the refresh token saved in the database.
  */
 #[post("/check_refresh")]
-async fn check_refresh(inputs: web::Json<RefreshCheckRequest>) -> HttpResponse {
+async fn check_refresh(
+    pool: web::Data<MySqlPool>,
+    inputs: web::Json<RefreshCheckRequest>
+) -> HttpResponse {
     let err_response: HttpResponse = HttpResponse::Ok()
         .json(RefreshCheckResponse::Err(RefreshCheckError {
             error_code: 500,
@@ -1168,7 +1213,11 @@ async fn check_refresh(inputs: web::Json<RefreshCheckRequest>) -> HttpResponse {
     // get the inputs and check them all
 
     let r_db_token: db::RefreshToken =
-        match db::get_refresh_token(inputs.user_id, inputs.client_id.to_owned()).await {
+        match db::get_refresh_token(
+            &pool,
+            inputs.user_id,
+            inputs.client_id.to_owned()
+        ).await {
             Ok(option) => {
                 match option {
                     Some(token) => token,

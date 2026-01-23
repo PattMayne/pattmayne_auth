@@ -15,11 +15,14 @@
  * That post-processing happens AFTER all the later calls
  */
 
+use std::any::Any;
+
 use actix_web::{
-    error, Error, HttpMessage,
+    web, error, Error, HttpMessage,
     body::MessageBody, dev::{ServiceRequest, ServiceResponse},
     middleware::{ Next }
 };
+use sqlx::{MySqlPool };
 
 use crate::{ auth, db, utils };
 
@@ -67,9 +70,18 @@ pub async fn login_status_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
+    // Get the pool from app_data
+
+    let pool = match req.app_data::<web::Data<MySqlPool>>() {
+        Some(p) => p,
+        None => return Err(error::ErrorInternalServerError("MYSQL pool error".to_string()))
+    };
+
+
     let guest_data: auth::UserReqData = auth::UserReqData::new(None);
     let user_req_data_opt: Option<actix_web::cookie::Cookie<'_>> = req.cookie("jwt");
     let user_req_data: auth::UserReqData = get_user_req_data_from_opt(
+        &pool,
         user_req_data_opt,
         &req,
         guest_data
@@ -87,6 +99,7 @@ pub async fn login_status_middleware(
  * user data for request (UserReqData).
  */
 async fn get_user_req_data_from_opt(
+    pool: &MySqlPool,
     option: Option<actix_web::cookie::Cookie<'_>>,
     req: &ServiceRequest,
     guest_data: auth::UserReqData
@@ -123,6 +136,7 @@ async fn get_user_req_data_from_opt(
             // check DB for refresh_token to compare
             let r_db_token_result: Result<Option<db::RefreshToken>, anyhow::Error> =
                 db::get_refresh_token(
+                    &pool,
                     claims.get_sub(),
                     utils::auth_client_id()
                 ).await;

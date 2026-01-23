@@ -3,6 +3,8 @@
 use actix_web::{ App, HttpServer, middleware::{from_fn}, web };
 use actix_files::Files;
 use dotenvy;
+use sqlx::{ MySqlPool };
+use std::io;
 
 // Local mods (they can use each other as crates instead of mods)
 mod routes;
@@ -32,10 +34,19 @@ async fn main() -> std::io::Result<()> {
     // dotenvy loads env variables for whole app
     // after this, just call std::env::var(variable_name)
     dotenvy::dotenv().ok();
-    db_first_entries().await;
 
-    HttpServer::new(|| {
+
+    // Create the database pool that every function will use
+    let pool: MySqlPool = match create_pool().await {
+        Ok(pool) => pool,
+        Err(_e) => return database_pool_err().await
+    };
+
+    db_first_entries(&pool).await;
+
+    HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(pool.clone()))
             .service(Files::new("/static", "./static"))
             .wrap(from_fn(middleware::login_status_middleware))
             .service(routes::home)
@@ -83,9 +94,9 @@ async fn main() -> std::io::Result<()> {
  * When the server first starts, make sure admin exists in users.
  * Also make sure auth site (this site) exists in client_sites.
  */
-async fn db_first_entries() {
+async fn db_first_entries(pool: &MySqlPool) {
     // add the admin user if they don't exist
-    match db::create_primary_admin().await {
+    match db::create_primary_admin(pool).await {
         Ok(user_created) => {
             if user_created {
                 println!("New admin created.");
@@ -99,7 +110,7 @@ async fn db_first_entries() {
     };
 
     // add this site to the client_sites table if it doesn't exist
-    match db::create_self_client().await {
+    match db::create_self_client(pool).await {
         Ok(user_created) => {
             if user_created {
                 println!("New client_site (auth) created.");
@@ -111,4 +122,31 @@ async fn db_first_entries() {
             println!("DB Error: {e}");
         }
     };
+}
+
+
+async fn database_pool_err() -> std::io::Result<()> {
+    eprintln!("ERROR: NO HASH ID SECRET.");
+    return Err(
+        io::Error::new(
+            io::ErrorKind::Other, "HASHID_SECRET not set")
+    );
+}
+
+
+ /**
+  * Create the database thread pool that every function will use
+  */
+async fn create_pool() -> Result<MySqlPool, String> {
+    let database_url: String = match std::env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_e) => return Err("Database Error".to_string())
+    };
+
+    let pool = match MySqlPool::connect(database_url.as_str()).await {
+        Ok(pool) => pool,
+        Err(_e) => return Err("Database Error".to_string())
+    };
+    
+    Ok(pool)
 }

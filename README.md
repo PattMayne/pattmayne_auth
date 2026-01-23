@@ -44,6 +44,8 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Make one MySqlPool for the WHOLE application and store it in web::Data<MySqlPool>
  * * This is declared at the beginning of the routes/middleware chain
  * * THIS IS VERY IMPORTANT
+ * Maybe gamify donations instead of demanding tickets?
+ * * Badges etc.
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.

@@ -23,6 +23,7 @@ use actix_web::{
 use actix_web::cookie::{ Cookie };
 use askama::Template;
 use serde::{ Deserialize, Serialize };
+use sqlx::{MySqlPool };
 
 // local modules, loaded as crates (declared as mods in main.rs)
 use crate::{
@@ -492,7 +493,10 @@ pub fn return_not_found_err_json() -> HttpResponse {
  * 
  * 
  */
-pub async fn get_user_auth_cookies(user: &db::User) -> Result<TwoAuthCookies, ErrorResponse> {
+pub async fn get_user_auth_cookies(
+    pool: &MySqlPool,
+    user: &db::User
+) -> Result<TwoAuthCookies, ErrorResponse> {
     // generate JWT. Don't send user obj (with password) back
     let jwt_err_500: ErrorResponse = ErrorResponse {
         error: String::from("Access Token Generation Error."),
@@ -514,6 +518,7 @@ pub async fn get_user_auth_cookies(user: &db::User) -> Result<TwoAuthCookies, Er
 
     // create a refresh_token and put it in the DB
     match db::add_refresh_token(
+        &pool,
         user.get_id(),
         utils::auth_client_id(),
         auth::generate_refresh_token()

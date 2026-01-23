@@ -265,39 +265,42 @@ impl User {
  */
 
 
-pub async fn get_auth_code_data(code: &String) -> Result<Option<AuthCodeData>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_auth_code_data(
+    pool: &MySqlPool,
+    code: &String
+) -> Result<Option<AuthCodeData>> {
     Ok(sqlx::query_as!(
             AuthCodeData,
             "SELECT id, user_id, client_id, code, expires_timestamp
             FROM auth_codes WHERE code = ?",
             code
-        ).fetch_optional(&pool).await?)
+        ).fetch_optional(pool).await?)
  }
 
 
-pub async fn get_user_by_username(username: &String) -> Result<Option<User>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_user_by_username(
+    pool: &MySqlPool,
+    username: &String
+) -> Result<Option<User>> {
     Ok(sqlx::query_as!(
             User,
             "SELECT id, username, email, first_name,
                 last_name, role, password_hash, created_timestamp,
                 email_verified FROM users WHERE username = ?",
             username
-        ).fetch_optional(&pool).await?)
+        ).fetch_optional(pool).await?)
 }
 
 
-pub async fn get_redirect_uri(client_id: &String) -> Result<Option<String>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_redirect_uri(
+    pool: &MySqlPool,
+    client_id: &String
+) -> Result<Option<String>> {
     let redirect_option: Option<RedirectUri> = sqlx::query_as!(
             RedirectUri,
             "SELECT redirect_uri FROM client_sites WHERE client_id = ?",
             client_id
-        ).fetch_optional(&pool).await?;
+        ).fetch_optional(pool).await?;
     
     match redirect_option {
         Some(redirect_obj) => {
@@ -308,9 +311,10 @@ pub async fn get_redirect_uri(client_id: &String) -> Result<Option<String>> {
 }
 
 
-pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_user_by_email(
+    pool: &MySqlPool,
+    email: &String
+) -> Result<Option<User>> {
     Ok(sqlx::query_as!(
         User,
         "SELECT id, username, email,
@@ -318,36 +322,39 @@ pub async fn get_user_by_email(email: &String) -> Result<Option<User>> {
             password_hash, created_timestamp,
             email_verified FROM users WHERE email = ?",
         email
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
-pub async fn get_username_by_id(id: i32) -> Result<Option<Username>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_username_by_id(
+    pool: &MySqlPool,
+    id: i32
+) -> Result<Option<Username>> {
     Ok(sqlx::query_as!(
         Username,
         "SELECT username FROM users WHERE id = ?",
         id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
-pub async fn get_username_and_role_by_id(id: i32) -> Result<Option<UsernameAndRole>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_username_and_role_by_id(
+    pool: &MySqlPool,
+    id: i32
+) -> Result<Option<UsernameAndRole>> {
     Ok(sqlx::query_as!(
         UsernameAndRole,
         "SELECT username, role FROM users WHERE id = ?",
         id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
 
-pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_user_by_id(
+    pool: &MySqlPool,
+    id: i32
+) -> Result<Option<User>> {
     Ok(sqlx::query_as!(
         User,
         "SELECT id, username, email,
@@ -355,23 +362,25 @@ pub async fn get_user_by_id(id: i32) -> Result<Option<User>> {
             password_hash, created_timestamp,
             email_verified FROM users WHERE id = ?",
         id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
 /**
  * Get a refresh token for specified user and client site.
  */
-pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option<RefreshToken>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_refresh_token(
+    pool: &MySqlPool,
+    user_id: i32,
+    client_id: String
+) -> Result<Option<RefreshToken>> {
     Ok(sqlx::query_as!(
         RefreshToken,
         "SELECT id, user_id, client_id,
             token, created_timestamp, expires_timestamp
             FROM refresh_tokens WHERE user_id = ? AND client_id = ?",
         user_id, client_id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 /**
@@ -379,20 +388,20 @@ pub async fn get_refresh_token(user_id: i32, client_id: String) -> Result<Option
  * These are references for the sake of lists, where the client_id can also
  * provide a handle for a link to an edit page (or whatever)
  */
-pub async fn get_client_refs() -> Result<Vec<ClientRef>> {
-    let pool: MySqlPool = create_pool().await?;
+pub async fn get_client_refs(pool: &MySqlPool) -> Result<Vec<ClientRef>> {
     let client_refs: Vec<ClientRef> = sqlx::query_as!(
         ClientRef,
         "SELECT client_id, name, logo_url FROM client_sites"
-    ).fetch_all(&pool).await?;
+    ).fetch_all(pool).await?;
 
     Ok(client_refs)
 }
 
 
-pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<ClientData>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_client_by_client_id(
+    pool: &MySqlPool,
+    client_id: &String
+) -> Result<Option<ClientData>> {
     Ok(sqlx::query_as!(
         ClientData,
         "SELECT id, client_id, hashed_client_secret,
@@ -401,19 +410,20 @@ pub async fn get_client_by_client_id(client_id: &String) -> Result<Option<Client
             client_type, is_internal, created_timestamp
             FROM client_sites WHERE client_id = ?",
         client_id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
-pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret>> {
-    let pool: MySqlPool = create_pool().await?;
-
+pub async fn get_client_secret(
+    pool: &MySqlPool,
+    client_id: &String
+) -> Result<Option<ClientSecret>> {
     Ok(sqlx::query_as!(
         ClientSecret,
         "SELECT hashed_client_secret
             FROM client_sites WHERE client_id = ?",
         client_id
-    ).fetch_optional(&pool).await?)
+    ).fetch_optional(pool).await?)
 }
 
 
@@ -446,15 +456,11 @@ pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret
   * if it's saved successfully to the DB.
   */
  pub async fn add_refresh_token(
+    pool: &MySqlPool,
     user_id: i32,
     client_id: String,
     refresh_token: String
 ) -> Result<String, anyhow::Error> {
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     let expires_timestamp: OffsetDateTime =
         OffsetDateTime::now_utc() + Duration::days(14); // TODO: put this in resources?
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
@@ -477,7 +483,7 @@ pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret
     .bind(&refresh_token)
     .bind(created_timestamp)
     .bind(expires_timestamp)
-    .execute(&pool).await.map_err(|e| {
+    .execute(pool).await.map_err(|e| {
         eprintln!("Failed to save refresh_token to database: {:?}", e);
         anyhow!("Could not save refresh_token to database: {e}")
     })?;
@@ -495,15 +501,11 @@ pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret
   * if it's saved successfully to the DB.
   */
  pub async fn add_auth_code(
+    pool: &MySqlPool,
     user_id: i32,
     client_id: &String,
     auth_code: String
 ) -> Result<String, anyhow::Error> {
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     let expires_timestamp: OffsetDateTime =
         OffsetDateTime::now_utc() + Duration::minutes(1);
     let created_timestamp: OffsetDateTime = OffsetDateTime::now_utc();
@@ -521,7 +523,7 @@ pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret
     .bind(&auth_code)
     .bind(created_timestamp)
     .bind(expires_timestamp)
-    .execute(&pool).await.map_err(|e| {
+    .execute(pool).await.map_err(|e| {
         eprintln!("Failed to save auth_code to database: {:?}", e);
         anyhow!("Could not save auth_code to database: {e}")
     })?;
@@ -533,17 +535,11 @@ pub async fn get_client_secret(client_id: &String) -> Result<Option<ClientSecret
 
 // Add new user to database
 pub async fn add_user(
+    pool: &MySqlPool,
     username: &String,
     email: &String,
     password: String
 ) -> Result<i32, anyhow::Error> {
-    // map_err changes a possible error into the return type of error I return in the closure
-    // This is simpler and more idiomatic than doing a match
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     let password_hash: String = auth::hash_password(password);
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "INSERT INTO users (
@@ -554,7 +550,7 @@ pub async fn add_user(
     .bind(username)
     .bind(email)
     .bind(&password_hash)
-    .execute(&pool).await.map_err(|e| {
+    .execute(pool).await.map_err(|e| {
         eprintln!("Failed to save user to database: {:?}", e);
         anyhow!("Could not save user to database: {e}")
     })?;
@@ -567,19 +563,14 @@ pub async fn add_user(
  * When the server starts up we make sure there is an admin.
  * Their default pre-hashed password is saved in an env variable.
  */
-pub async fn create_primary_admin() -> Result<bool, anyhow::Error> {
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
+pub async fn create_primary_admin(pool: &MySqlPool) -> Result<bool, anyhow::Error> {
     // If admin already exists, print their name and return false.
 
     let count_option: Option<Count> = match sqlx::query_as!(
         Count,
         "SELECT COUNT(*) as count FROM users WHERE role = ?",
         "admin"
-    ).fetch_optional(&pool).await {
+    ).fetch_optional(pool).await {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to fetch admin user count from DB: {:?}", e);
@@ -611,7 +602,7 @@ pub async fn create_primary_admin() -> Result<bool, anyhow::Error> {
         .bind(email)
         .bind(role)
         .bind(&default_pw)
-        .execute(&pool).await.map_err(|e| {
+        .execute(pool).await.map_err(|e| {
             eprintln!("Failed to save FIRST ADMIN user to database: {:?}", e);
             anyhow!("Could not save FIRST ADMIN user to database: {e}")
         })?;
@@ -625,21 +616,15 @@ pub async fn create_primary_admin() -> Result<bool, anyhow::Error> {
  * When the server starts up we make sure the auth site (this site)
  * exists as a client_site in the DB.
  */
-pub async fn create_self_client() -> Result<bool, anyhow::Error> {
+pub async fn create_self_client(pool: &MySqlPool) -> Result<bool, anyhow::Error> {
     let domain: String = std::env::var("AUTH_DOMAIN")?;
-
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     // If site already exists, print their name and return false.
 
     let count_option: Option<Count> = match sqlx::query_as!(
         Count,
         "SELECT COUNT(*) as count FROM client_sites WHERE domain = ?",
         &domain
-    ).fetch_optional(&pool).await {
+    ).fetch_optional(pool).await {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to fetch client_sites count from DB: {:?}", e);
@@ -683,7 +668,7 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
         .bind(client_type)
         .bind(category)
         .bind(is_internal)
-        .execute(&pool).await.map_err(|e| {
+        .execute(pool).await.map_err(|e| {
             eprintln!("Failed to save FIRST AUTH client to database: {:?}", e);
             anyhow!("Could not save FIRST AUTH client to database: {e}")
         })?;
@@ -697,13 +682,11 @@ pub async fn create_self_client() -> Result<bool, anyhow::Error> {
  * When the server starts up we make sure the auth site (this site)
  * exists as a client_site in the DB.
  */
-pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, anyhow::Error> {
-
+pub async fn add_external_client(
+    pool: &MySqlPool,
+    new_client_data: NewClientData
+) -> Result<u64, anyhow::Error> {
     println!("In the DB to add a NEW CLIENT SITE!!!!!");
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
 
     // We trust that the data has already been checked. We simply enter it like obedient robots now.
     // Except that we will turn the bool into an int.
@@ -732,7 +715,7 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
         .bind(new_client_data.category)
         .bind(0)
         .bind(new_client_data.is_active)
-        .execute(&pool).await.map_err(|e| {
+        .execute(pool).await.map_err(|e| {
             eprintln!("Failed to save EXTERNAL CLIENT to database: {:?}", e);
             anyhow!("Could not save EXTERNAL CLIENT to database: {e}")
         })?;
@@ -765,12 +748,11 @@ pub async fn add_external_client(new_client_data: NewClientData) -> Result<u64, 
  */
 
 
-pub async fn update_external_client(update_client_data: UpdateClientData) -> Result<i32, anyhow::Error> {
+pub async fn update_external_client(
+    pool: &MySqlPool,
+    update_client_data: UpdateClientData
+) -> Result<i32, anyhow::Error> {
     println!("Updating client in the database.");
-        let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
 
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
     "UPDATE client_sites SET name = ?, domain = ?, redirect_uri = ?,
@@ -785,30 +767,24 @@ pub async fn update_external_client(update_client_data: UpdateClientData) -> Res
         .bind(update_client_data.client_type)
         .bind(update_client_data.category)
         .bind(update_client_data.client_id)
-        .execute(&pool)
+        .execute(pool)
         .await?;
 
     Ok(result.rows_affected() as i32)
 }
 
 pub async fn update_real_names(
+    pool: &MySqlPool,
     first_name: &String,
     last_name: &String,
     id: i32
 )-> Result<i32, anyhow::Error> {
-     // map_err changes a possible error into the return type of error I return in the closure
-    // This is simpler and more idiomatic than doing a match
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
     "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?")
             .bind(first_name)
             .bind(last_name)
             .bind(id)
-            .execute(&pool)
+            .execute(pool)
             .await?;
 
     Ok(result.rows_affected() as i32)
@@ -816,19 +792,15 @@ pub async fn update_real_names(
 
 
 pub async fn update_client_secret(
+    pool: &MySqlPool,
     client_id: &String,
     hashed_client_secret: &String
 ) -> Result<i32, anyhow::Error> {
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
     let result = sqlx::query(
         "UPDATE client_sites SET hashed_client_secret = ? WHERE client_id = ?")
             .bind(hashed_client_secret)
             .bind(client_id)
-            .execute(&pool)
+            .execute(pool)
             .await?;
 
     Ok(result.rows_affected() as i32)
@@ -840,20 +812,19 @@ pub async fn update_client_secret(
  * Route has already confirmed that it's an acceptable password.
  * Hash it and save it to the database.
  */
-pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::Error> {
-    let hashed_password: String = auth::hash_password(password.to_owned());
+pub async fn update_password(
+    pool: &MySqlPool,
+    password: &String,
+    id: i32
+)-> Result<i32, anyhow::Error> {
 
     // save password to DB and return positive result
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
+    let hashed_password: String = auth::hash_password(password.to_owned());
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "UPDATE users SET password_hash = ? WHERE id = ?")
             .bind(hashed_password)
             .bind(id)
-            .execute(&pool)
+            .execute(pool)
             .await?;
 
     Ok(result.rows_affected() as i32)
@@ -886,16 +857,14 @@ pub async fn update_password(password: &String, id: i32)-> Result<i32, anyhow::E
 /**
  * When a user logs out of a site, delete all their refresh tokens
  */
-pub async fn delete_refresh_token(user_id: i32) -> Result<i32, anyhow::Error> {
-    let pool: MySqlPool = create_pool().await.map_err(|e| {
-        eprintln!("Failed to create pool: {:?}", e);
-        anyhow!("Could not create pool: {e}")
-    })?;
-
+pub async fn delete_refresh_token(
+    pool: &MySqlPool,
+    user_id: i32
+) -> Result<i32, anyhow::Error> {
     let result: sqlx::mysql::MySqlQueryResult = sqlx::query(
         "DELETE FROM refresh_tokens WHERE user_id = ?")
             .bind(user_id)
-            .execute(&pool)
+            .execute(pool)
             .await?;
 
     Ok(result.rows_affected() as i32)
@@ -933,20 +902,12 @@ pub async fn delete_refresh_token(user_id: i32) -> Result<i32, anyhow::Error> {
 // ACTUALLY don't bother. Instead, deal with broken pools when doing the actual insert.
 
 // check if username already exists in DB
-pub async fn username_taken(username: &String) -> bool {
-    let pool: MySqlPool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            eprintln!("Failed to create pool: {:?}", e);
-            return false;
-        }
-    };
-
+pub async fn username_taken(pool: &MySqlPool, username: &String) -> bool {
     let count_option: Option<Count> = match sqlx::query_as!(
         Count,
         "SELECT COUNT(*) as count FROM users WHERE username = ?",
         username
-    ).fetch_optional(&pool).await {
+    ).fetch_optional(pool).await {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to fetch count from DB: {:?}", e);
@@ -959,20 +920,12 @@ pub async fn username_taken(username: &String) -> bool {
 }
 
 // Check if email address already exists in DB
-pub async fn email_taken(email: &String) -> bool {
-    let pool: MySqlPool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            eprintln!("Failed to create pool: {:?}", e);
-            return false;
-        }
-    };
-
+pub async fn email_taken(pool: &MySqlPool, email: &String) -> bool {
     let count_option: Option<Count> = match sqlx::query_as!(
         Count,
         "SELECT COUNT(*) as count FROM users WHERE email = ?",
         email
-    ).fetch_optional(&pool).await {
+    ).fetch_optional(pool).await {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to fetch count from DB: {:?}", e);
@@ -982,14 +935,4 @@ pub async fn email_taken(email: &String) -> bool {
 
     let count: i64 = count_option.unwrap_or(Count{count: 0}).count;
     count > 0
-
-}
-
-
-
-pub async fn create_pool() -> Result<MySqlPool> {
-     // Load environment variables from .env file.
-    // CHECK: Fails if .env file not found, not readable or invalid.
-    let database_url: String = std::env::var("DATABASE_URL")?;
-    Ok(MySqlPool::connect(database_url.as_str()).await?)
 }
