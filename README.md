@@ -5,15 +5,8 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
 
 ### TO DO:
  * suspend IP address if too many failed attempts
- * create endpoints for another app to authenticate
- * * new routes file called external_routes
- * * create an enum of apps that can use this
- * * or MAYBE they should be in the DB instead.
  * Containerize with Docker
  * move env variable from .env to somewhere more secure for production
- * Remove magic strings from front-end JS. Put them in globals or resources file.
- * * Use yaml files (flat style)
- * * NO: use use phf::phf_map;  ( MUCH faster, though more verbose )
  * Make tests
  * When a person tries to register on a site, but they're already registered on another, just log them in
  * * This will create a refresh token for THAT site
@@ -25,14 +18,9 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Integrate payment APIs (probably with reqwest crate)
  * * Integrate Stripe for payments
  * * Accept crypto currency with a 3rd party API (like coinbase)
- * Switch from Foundation to Bulma
- * * https://bulma.io/documentation/columns/responsiveness/
- * * This requires I do my own ARIA compliance stuff
- * Read language from header to create FR option in UserReqObj
  * Give user "lang" option in the DB
  * Turn on Content-Encoding: gzip
  * Modal popup demands confirmation before generating new client_secret
- * Too many nested match patterns in routes.rs.
  * Write an essay about the auth flow between instances to help remember the details.
  * Apply regex check to logo url in "edit client site" page
  * JWT EXPIRED notice arrives too many times. Route or middleware being hit too many times.
@@ -41,9 +29,6 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * From auth_app, use can click a game_app (logo/link) to get redirected & logged into game site.
  * Move login/register logic into auth.rs module.
  * * Don't return http stuff to the route function. Just return the data that the user needs.
- * Make one MySqlPool for the WHOLE application and store it in web::Data<MySqlPool>
- * * This is declared at the beginning of the routes/middleware chain
- * * THIS IS VERY IMPORTANT
  * Maybe gamify donations instead of demanding tickets?
  * * Badges etc.
 
