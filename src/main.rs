@@ -35,7 +35,6 @@ async fn main() -> std::io::Result<()> {
     // after this, just call std::env::var(variable_name)
     dotenvy::dotenv().ok();
 
-
     // Create the database pool that every function will use
     let pool: MySqlPool = match create_pool().await {
         Ok(pool) => pool,
@@ -134,9 +133,9 @@ async fn database_pool_err() -> std::io::Result<()> {
 }
 
 
- /**
-  * Create the database thread pool that every function will use
-  */
+/**
+ * Create the database thread pool that every function will use
+*/
 async fn create_pool() -> Result<MySqlPool, String> {
     let database_url: String = match std::env::var("DATABASE_URL") {
         Ok(url) => url,
