@@ -34,6 +34,10 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * Maybe gamify donations instead of demanding tickets?
  * * Badges etc.
  * Add developer blog
+ * Terms and Conditions for signup
+ * Table for site_info
+ * * "singleton" style... all text... key-value
+ * Forgot Password option
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
