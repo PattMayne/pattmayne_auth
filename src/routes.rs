@@ -780,12 +780,30 @@ pub async fn auth_home() -> impl Responder {
 
 /* ROOT DOMAIN */
 #[get("/")]
-async fn home(req: HttpRequest) -> HttpResponse {
+async fn home(
+    pool: web::Data<MySqlPool>,
+    req: HttpRequest
+) -> HttpResponse {
     let user_req_data: auth::UserReqData = auth::get_user_req_data(&req);
+
+    // get list of client sites
+    // select ACTIVE and NOT AUTH_SITE
+    // update HomeTemplate to include that list
+
+    // Get client site references to list on admin site
+    let client_links: Vec<db::ClientLinkData> =
+        match db::get_client_links(&pool).await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("Error retrieving client references: {e}");
+                Vec::new()
+            }
+        };
 
     let home_template: HomeTemplate = HomeTemplate {
         texts: HomeTexts::new(&user_req_data),
         user: user_req_data,
+        client_links
     };
 
     HttpResponse::Ok()

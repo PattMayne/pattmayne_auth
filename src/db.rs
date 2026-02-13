@@ -89,6 +89,15 @@ pub struct RefreshToken {
     expires_timestamp: OffsetDateTime
 }
 
+
+pub struct ClientLinkData {
+    pub domain: String,
+    pub logo_url: String,
+    pub name: String,
+    pub description: String,
+}
+
+
 /**
  * When you UPDATE existing client site data
  */
@@ -396,6 +405,22 @@ pub async fn get_client_refs(pool: &MySqlPool) -> Result<Vec<ClientRef>> {
 
     Ok(client_refs)
 }
+
+
+/**
+ * Get a collection of link data (name, domain, description, logo) for sites
+ * that are ACTIVE and are NOT the auth site.
+ */
+pub async fn get_client_links(pool: &MySqlPool) -> Result<Vec<ClientLinkData>> {
+    let client_refs: Vec<ClientLinkData> = sqlx::query_as!(
+        ClientLinkData,
+        "SELECT name, logo_url, domain, description FROM client_sites 
+        WHERE is_active = 1 AND is_internal != 1"
+    ).fetch_all(pool).await?;
+
+    Ok(client_refs)
+}
+
 
 
 pub async fn get_client_by_client_id(

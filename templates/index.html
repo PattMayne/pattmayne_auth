@@ -7,7 +7,7 @@
         <title>{{ texts.title }}</title>
         <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
         <link rel="stylesheet" href="static/css/foundation.min.css">
-        <link rel="stylesheet" href="static/css/app.css?id=41">
+        <link rel="stylesheet" href="static/css/app.css?id=1">
     </head>
 
 
@@ -19,14 +19,29 @@
                 <h1>{{ texts.title }}</h1>
             </div>
 
-            <div class="large-12 cell">
+            <div class="large-4 medium-6 small-12 cell">
                 <div class="callout">
                     <p>
                         {{ texts.message }}
                     </p>
                 </div>
 
-                           </div>
+                <div class="callout primary">
+                    <p>CRANKADE is the central hub for where I (Matt Payne) will host any web apps and games that I want to share with you. Right now there's just one: CRANKWORD, a multi-player, turn-based word-guessing game. Please enjoy!</p>
+                </div>
+
+            </div>
+
+            <div class="large-12 cell">
+                <h2>APPS</h2>
+                {% for link in client_links %}
+                <div class="callout client_link_callout">
+                    <h5><a href="{{ link.domain }}">{{ link.name }}</a></h5>
+                    <a href="{{ link.domain }}"><img class="client_link_logo" src="{{ link.logo_url }}" /></a>
+                    <p>{{ link.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
         </div> <!-- end of grid-x -->
 
     </div><!-- end of grid-container -->

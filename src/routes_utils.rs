@@ -315,6 +315,7 @@ pub struct TwoAuthCookies {
 pub struct HomeTemplate {
     pub texts: HomeTexts,
     pub user: auth::UserReqData,
+    pub client_links: Vec<db::ClientLinkData>,
 }
 
 

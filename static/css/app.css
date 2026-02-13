@@ -51,8 +51,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* FOUNDATION OVERRIDES */
+.callout.primary a {
+  color: #f0f0f0;
+}
+
+.callout.primary a:hover {
+  color: #f0f0f0;
+}
+
+.callout a,
+.callout.primary .callout a {
+  color: #bdf000;
+  text-decoration: none;
+}
+
+.callout a:hover,
+.callout.primary .callout a:hover {
+  color: #111111;
+}
+
 .callout {
-  background-color: #2e5c8a;
+  background-color: #5a639e;
   color: #f0f0f0;
 }
 
@@ -73,7 +92,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid #111111;
   border-radius: 5px;
   background-color: #248232;
-  color: #f0f0f0;
+  color: #f0f0f0 !important;
   font-family: lato, arial;
   font-weight: bold;
   text-transform: uppercase;
@@ -81,7 +100,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .button:hover, .button:focus {
   background-color: #111111;
-  color: #f0f0f0;
+  color: #f0f0f0 !important;
 }
 
 .top-bar,
@@ -100,6 +119,35 @@ h1, h2, h3, h4, h5, h6 {
   background-color: transparent;
   border: none;
   border-radius: 0px;
+}
+
+/* 
+ * 
+ * 
+ * 
+ * 
+ * ========================
+ * ========================
+ * =====              =====
+ * =====  FRONT PAGE  =====
+ * =====              =====
+ * ========================
+ * ========================
+ * 
+ * 
+ * 
+ * 
+*/
+.client_link_callout {
+  display: inline-block;
+  width: auto;
+  margin-right: 5px;
+  text-align: center;
+}
+
+.client_link_logo {
+  width: 175px;
+  max-width: 100%;
 }
 
 /*# sourceMappingURL=app.css.map */

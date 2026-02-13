@@ -1,5 +1,8 @@
 # PATTMAYNE AUTH
 
+The name of the site will be CRANKADE.
+Like and ARCADE for CRANKS.
+
 An authentication app I will use to serve a few web apps and games I intend to make.
 I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
 
@@ -26,11 +29,11 @@ I'll use JSON webtokens (JWTs) reinforced by refresh_tokens.
  * JWT EXPIRED notice arrives too many times. Route or middleware being hit too many times.
  * * Depends on what page you're on.
  * Register must also send you to game (and also set those cookies locally)
- * From auth_app, use can click a game_app (logo/link) to get redirected & logged into game site.
  * Move login/register logic into auth.rs module.
  * * Don't return http stuff to the route function. Just return the data that the user needs.
  * Maybe gamify donations instead of demanding tickets?
  * * Badges etc.
+ * Add developer blog
 
 ### Client Tokens Structure:
 The client apps will set JWTs as access tokens into the user's browser's secure cookies. JWTs will expire every few minutes (somewhere within an hour) and be refreshed based on user's refresh token (which is also stored in a secure cookie). JWTs are not stored on any server, only in the browser. But each client app can verify the token, and each client app has its own JWT secret.
